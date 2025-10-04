@@ -1,0 +1,39 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+</div>
+
+<div id="main" style="width: 600px;height:400px;"></div>
+
+<script type="text/javascript">
+  // Initialize the echarts instance based on the prepared dom
+  var myChart = echarts.init(document.getElementById('main'), 'dark');
+
+  // Specify the configuration items and data for the chart
+  var option = {
+      xAxis: {
+          data: ['2017-10-24', '2017-10-25', '2017-10-26', '2017-10-27']
+      },
+      yAxis: {},
+      series: [
+          {
+              type: 'candlestick',
+              data: [
+                  [20, 34, 10, 38],
+                  [40, 35, 30, 50],
+                  [31, 38, 33, 44],
+                  [38, 15, 5, 42]
+              ]
+          }
+      ]
+  };
+
+  // Display the chart using the configuration items and data just specified.
+  myChart.setOption(option);
+</script>
