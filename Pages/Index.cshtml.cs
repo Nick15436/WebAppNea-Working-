@@ -7,6 +7,8 @@ public class IndexModel : PageModel
 {
     private readonly ILogger<IndexModel> _logger;
     private readonly HttpClient _httpClient;
+    public string CandlesData;
+    public string LabelsData;
 
     public IndexModel(ILogger<IndexModel> logger, HttpClient httpClient)
     {
@@ -47,18 +49,34 @@ public class IndexModel : PageModel
                 timeSeriesList.Add(dataPoint);
             }
 
-            for (int i = 1; i < 6; i++)
+            CandlesData = "[" + timeSeriesList[1].ToString();
+            
+            for (int i = 2; i < 6; i++)
             {
                 _logger.LogInformation("DataPoint " + i);
-                timeSeriesList[i].PrintValues();
+               _logger.LogInformation(timeSeriesList[i].ToString()); 
                 _logger.LogInformation("");
+                
+                
+                CandlesData = CandlesData + ", " + timeSeriesList[i].ToString();
             }
 
+            CandlesData = CandlesData + "]";
+            
             _logger.LogInformation($"The next price will be: {timeSeriesList[5].Close}");
+            /*
+             The C# part of the program interacts with the .cshtml files as if the html and javascript in that file is
+             one big string.
+             
+            Example:
+            CandlesData = "[[20, 34, 10, 38],[40, 35, 30, 50],[31, 38, 33, 44],[38, 15, 5, 42]]";
+            LabelsData = "['2017-10-24', '2017-10-25', '2017-10-26', '2017-10-27']";
+            */
             
+            // order is: close, open, low, high
+            //CandlesData = "[[20, 34, 10, 38],[40, 35, 30, 50],[31, 38, 33, 44],[38, 15, 5, 42]]";
+            LabelsData = "['2017-10-24', '2017-10-25', '2017-10-26', '2017-10-27', '2017-10-24', '2017-10-25', '2017-10-26', '2017-10-27']";
             
-            
-
         }
         //the catch only works for errors in which the file could not be read
         catch (IOException e) 
@@ -67,7 +85,7 @@ public class IndexModel : PageModel
             _logger.LogInformation(e.Message);
         }
         
-        
+       
         
         
     }

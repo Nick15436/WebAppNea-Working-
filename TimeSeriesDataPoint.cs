@@ -22,13 +22,9 @@ public class TimeSeriesDataPoint
     public float Volume { get; set; }
 
 
-    public void PrintValues()
+    public override string ToString()
     {
-        Console.WriteLine("Closing price: " + Close);
-        Console.WriteLine("Highest price: " + High);
-        Console.WriteLine("Lowest price: " + Low);
-        Console.WriteLine("Opening price: " + Open);
-        Console.WriteLine("Volume: " + Volume);
+        return $"[{Close}, {Open}, {Low}, {High}]";
     }
 
 
