@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -16,10 +17,11 @@ public class IndexModel : PageModel
         _httpClient = httpClient;
     }
 
-    public void OnGet()
+    public void OnGet(string ticker)
     {
         try
         {
+            
             
             // Open the text file using a stream reader.
             using StreamReader reader = new("API_KEY");
@@ -28,30 +30,40 @@ public class IndexModel : PageModel
             string apiKey = reader.ReadToEnd();
 
             
-            string url = $"https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY&symbol=AAPL&apikey={apiKey}";
+            string url = $"https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY&symbol={ticker}&apikey={apiKey}";
 
            
 
-            ApiData response = _httpClient
-                .GetFromJsonAsync<ApiData>(url)
+            HttpResponseMessage response = _httpClient
+                .GetAsync(url)
                 .ConfigureAwait(false)
                 .GetAwaiter()
                 .GetResult();
-            
-             //_logger.LogInformation(response.TimeSeries["2024-06-02"].Open);
 
-            
+           string responseContent = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+           _logger.LogInformation(responseContent);
+
+           ApiData apiData = JsonSerializer.Deserialize<ApiData>(responseContent);
             
             List<TimeSeriesDataPoint> timeSeriesList = new List<TimeSeriesDataPoint>();
+            List<string> dates = new List<string>();
 
-            foreach (TimeSeriesDataPoint dataPoint in response.TimeSeries.Values)
+            foreach (TimeSeriesDataPoint dataPoint in apiData.TimeSeries.Values)
             {
                 timeSeriesList.Add(dataPoint);
             }
 
-            CandlesData = "[" + timeSeriesList[1].ToString();
+            foreach (string key in apiData.TimeSeries.Keys)
+            {
+                dates.Add(key);
+            }
+
+            timeSeriesList.Reverse();
+            dates.Reverse();
             
-            for (int i = 2; i < 6; i++)
+            CandlesData = "[" + timeSeriesList[0].ToString();
+            LabelsData = "[" + $"'{dates[0]}'";
+            for (int i = 1; i < timeSeriesList.Count; i++)
             {
                 _logger.LogInformation("DataPoint " + i);
                _logger.LogInformation(timeSeriesList[i].ToString()); 
@@ -59,8 +71,11 @@ public class IndexModel : PageModel
                 
                 
                 CandlesData = CandlesData + ", " + timeSeriesList[i].ToString();
+                LabelsData = LabelsData + ", " + $"'{dates[i]}'";
+
             }
 
+            LabelsData = LabelsData + "]";
             CandlesData = CandlesData + "]";
             
             _logger.LogInformation($"The next price will be: {timeSeriesList[5].Close}");
@@ -75,7 +90,7 @@ public class IndexModel : PageModel
             
             // order is: close, open, low, high
             //CandlesData = "[[20, 34, 10, 38],[40, 35, 30, 50],[31, 38, 33, 44],[38, 15, 5, 42]]";
-            LabelsData = "['2017-10-24', '2017-10-25', '2017-10-26', '2017-10-27', '2017-10-24', '2017-10-25', '2017-10-26', '2017-10-27']";
+            //LabelsData = "['2017-10-24', '2017-10-25', '2017-10-26', '2017-10-27', '2017-10-24', '2017-10-25', '2017-10-26', '2017-10-27']";
             
         }
         //the catch only works for errors in which the file could not be read

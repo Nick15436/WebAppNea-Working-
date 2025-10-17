@@ -4,6 +4,22 @@
     ViewData["Title"] = "Home page";
 }
 
+<ul class="nav nav-pills">
+    <li class="nav-item">
+        <a class="nav-link active" aria-current="page" href="/?ticker=AAPL">AAPL</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/?ticker=GOOG">GOOG</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/?ticker=AMZN">AMZN</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/?ticker=MSFT">MSFT</a>
+    </li>
+</ul>
+
+
 <div class="text-center">
     <h1 class="display-4">Welcome</h1>
     <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
@@ -13,10 +29,25 @@
 
 <script type="text/javascript">
   // Initialise the echarts instance based on the prepared dom
-  var myChart = echarts.init(document.getElementById('main'), 'dark');
+  var myChart = echarts.init(document.getElementById('main'), 'dark', {
+      width: 1000,
+      height: 800
+  });
 
+  
   // Specify the configuration items and data for the chart
   var option = {
+
+      dataZoom: {type: 'slider'},
+      
+      grid: 
+      {
+          width: 800,
+      },
+      
+      
+      
+      
       xAxis: {
           // The Asp library replaces certain characters with the corresponding html code in order to "help".
           //  Html.Raw tells the Asp to not help.
@@ -30,6 +61,7 @@
           }
       ]
   };
+  
 
   // Display the chart using the configuration items and data just specified.
   myChart.setOption(option);
