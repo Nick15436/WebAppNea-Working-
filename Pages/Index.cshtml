@@ -25,44 +25,52 @@
     <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
 </div>
 
-<div id="main" style="width: 600px;height:400px;"></div>
+
+@if (Model.ApiDataIsNull)
+{
+    <p> Request limit hit. It does not work. NOT REAL-TIME DATA. </p>
+
+}
+
+
+<div id="main" style="width: 1000px;height:600px;"></div>
+
 
 <script type="text/javascript">
-  // Initialise the echarts instance based on the prepared dom
-  var myChart = echarts.init(document.getElementById('main'), 'dark', {
-      width: 1000,
-      height: 800
-  });
+    // Initialise the echarts instance based on the prepared dom
+    var myChart = echarts.init(document.getElementById('main'), 'dark');
 
-  
-  // Specify the configuration items and data for the chart
-  var option = {
 
-      dataZoom: {type: 'slider'},
-      
-      grid: 
-      {
-          width: 800,
-      },
-      
-      
-      
-      
-      xAxis: {
-          // The Asp library replaces certain characters with the corresponding html code in order to "help".
-          //  Html.Raw tells the Asp to not help.
-          data: @Html.Raw(Model.LabelsData)
-      },
-      yAxis: {},
-      series: [
-          {
-              type: 'candlestick',
-              data: @Html.Raw(Model.CandlesData)
-          }
-      ]
-  };
-  
+    // Specify the configuration items and data for the chart
+    var option = {
 
-  // Display the chart using the configuration items and data just specified.
-  myChart.setOption(option);
+        dataZoom: {type: 'slider'},
+
+        grid:
+            {
+                width: 800,
+            },
+
+
+
+
+        xAxis: {
+            // The Asp library replaces certain characters with the corresponding html code in order to "help".
+            //  Html.Raw tells the Asp to not help.
+            data: @Html.Raw(Model.LabelsData)
+        },
+        yAxis: {},
+        series: [
+            {
+                type: 'candlestick',
+                data: @Html.Raw(Model.CandlesData)
+            }
+        ]
+    };
+
+
+    // Display the chart using the configuration items and data just specified.
+    myChart.setOption(option);
 </script>
+
+    
