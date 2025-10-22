@@ -63,6 +63,8 @@ public class IndexModel : PageModel
                ApiDataIsNull = false;
                
                
+               // Puts all data points in and corresponding dates in lists and reverses them (because they are in the wrong order)
+               // Start
                List<TimeSeriesDataPoint> timeSeriesList = new List<TimeSeriesDataPoint>();
                List<string> dates = new List<string>();
 
@@ -76,15 +78,15 @@ public class IndexModel : PageModel
                    dates.Add(date);
 
                }
-
                
-
                timeSeriesList.Reverse();
                dates.Reverse();
+               // End
                
-               //Code used to check whether the last datapoint is the correct interval away from the second to last one.
-               //If not, then it is removed (data handling)
-            
+               
+               // Code used to check whether the last datapoint is the correct interval away from the second to last one.
+               // If not, then it is removed (data handling)
+               // Start
                bool lastDatapointValid = true;
                
                int lastYear = Convert.ToInt32(dates[dates.Count - 1].Substring(0, 4));
@@ -105,10 +107,10 @@ public class IndexModel : PageModel
 
                    lastDatapointValid = false;
                }
+               // End
                
-               
-               
-               
+               // Puts all datapoints and dates in one big string and formats them appropriately
+               // Start (of formatting part)
                CandlesData = "[" + timeSeriesList[0].ToString();
                LabelsData = "[" + $"'{dates[0]}'";
                for (int i = 1; i < timeSeriesList.Count; i++)
@@ -125,6 +127,7 @@ public class IndexModel : PageModel
                
                
                // Naive prediction
+               // Start (of prediction)
                CandlesData =  CandlesData + ", " + timeSeriesList[timeSeriesList.Count - 1];
                DateTime naiveDateTime;
                
@@ -139,9 +142,14 @@ public class IndexModel : PageModel
                
                naiveDateTime = naiveDateTime.AddDays(7);
                LabelsData = LabelsData + ", " + $"'{naiveDateTime.Year}-{naiveDateTime.Month}-{naiveDateTime.Day}'";
+               // End (of prediction)
+               
                
                LabelsData = LabelsData + "]";
                CandlesData = CandlesData + "]";
+               // End (of formatting part)
+               
+               
             
                _logger.LogInformation($"The next price will be: {timeSeriesList[5].Close}");
                /*
