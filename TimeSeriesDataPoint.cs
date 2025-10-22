@@ -21,7 +21,8 @@ public class TimeSeriesDataPoint
     [JsonPropertyName("5. volume")]
     public string Volume { get; set; }
 
-
+    
+    //Converts datapoint to string and also puts it in correct format.
     public override string ToString()
     {
         return $"[{Close}, {Open}, {Low}, {High}]";

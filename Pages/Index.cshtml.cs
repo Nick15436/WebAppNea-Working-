@@ -71,14 +71,44 @@ public class IndexModel : PageModel
                    timeSeriesList.Add(dataPoint);
                }
 
-               foreach (string key in apiData.TimeSeries.Keys)
+               foreach (string date in apiData.TimeSeries.Keys)
                {
-                   dates.Add(key);
+                   dates.Add(date);
+
                }
+
+               
 
                timeSeriesList.Reverse();
                dates.Reverse();
+               
+               //Code used to check whether the last datapoint is the correct interval away from the second to last one.
+               //If not, then it is removed (data handling)
             
+               bool lastDatapointValid = true;
+               
+               int lastYear = Convert.ToInt32(dates[dates.Count - 1].Substring(0, 4));
+               int lastMonth = Convert.ToInt32(dates[dates.Count - 1].Substring(5, 2));
+               int lastDay = Convert.ToInt32(dates[dates.Count - 1].Substring(8, 2));
+                   
+               int pinultimateYear = Convert.ToInt32(dates[dates.Count - 2].Substring(0, 4));
+               int pinultimateMonth = Convert.ToInt32(dates[dates.Count - 2].Substring(5, 2));
+               int pinultimateDay = Convert.ToInt32(dates[dates.Count - 2].Substring(8, 2));
+                   
+                   DateTime lastDateTime = new DateTime(lastYear, lastMonth, lastDay );
+                   DateTime pinultimateDateTime = new DateTime(pinultimateYear, pinultimateMonth, pinultimateDay);
+                   
+               if (lastDateTime.Subtract(pinultimateDateTime).Days != 7)
+               {
+                   dates.RemoveAt(dates.Count -1 );
+                   timeSeriesList.RemoveAt(timeSeriesList.Count - 1);
+
+                   lastDatapointValid = false;
+               }
+               
+               
+               
+               
                CandlesData = "[" + timeSeriesList[0].ToString();
                LabelsData = "[" + $"'{dates[0]}'";
                for (int i = 1; i < timeSeriesList.Count; i++)
@@ -88,11 +118,28 @@ public class IndexModel : PageModel
                    _logger.LogInformation("");
                 
                 
-                   CandlesData = CandlesData + ", " + timeSeriesList[i].ToString();
+                   CandlesData = CandlesData + ", " + timeSeriesList[i];
                    LabelsData = LabelsData + ", " + $"'{dates[i]}'";
 
                }
-
+               
+               
+               // Naive prediction
+               CandlesData =  CandlesData + ", " + timeSeriesList[timeSeriesList.Count - 1];
+               DateTime naiveDateTime;
+               
+               if (lastDatapointValid)
+               {
+                   naiveDateTime = new DateTime(lastYear, lastMonth, lastDay);
+               }
+               else
+               {
+                   naiveDateTime = new DateTime(pinultimateYear, pinultimateMonth, pinultimateDay);
+               }
+               
+               naiveDateTime = naiveDateTime.AddDays(7);
+               LabelsData = LabelsData + ", " + $"'{naiveDateTime.Year}-{naiveDateTime.Month}-{naiveDateTime.Day}'";
+               
                LabelsData = LabelsData + "]";
                CandlesData = CandlesData + "]";
             

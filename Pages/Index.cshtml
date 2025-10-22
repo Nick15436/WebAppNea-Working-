@@ -51,9 +51,13 @@
                 width: 800,
             },
 
-
-
-
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                type: 'line'
+            }
+        },
+            
         xAxis: {
             // The Asp library replaces certain characters with the corresponding html code in order to "help".
             //  Html.Raw tells the Asp to not help.
