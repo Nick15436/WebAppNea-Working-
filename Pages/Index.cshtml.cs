@@ -19,7 +19,7 @@ public class IndexModel : PageModel
         _httpClient = httpClient;
     }
 
-    public void OnGet(string ticker = "AAPL")
+    public void OnGet( string prediction = "NoPrediction", string ticker = "AAPL")
     {
         try
         {
@@ -42,12 +42,14 @@ public class IndexModel : PageModel
                 .GetAwaiter()
                 .GetResult();
 
+            
+            //Reads entire response and converts it to string
            string responseContent = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
            _logger.LogInformation(responseContent);
            _logger.LogInformation(response.StatusCode.ToString());
           // System.IO.File.WriteAllText("response.txt", responseContent);
 
-          
+          // deserialises, meaning converts JSON to C# objects, which are easy to access
            ApiData apiData = JsonSerializer.Deserialize<ApiData>(responseContent);
 
            if (apiData.TimeSeries == null)
@@ -87,27 +89,36 @@ public class IndexModel : PageModel
                // Code used to check whether the last datapoint is the correct interval away from the second to last one.
                // If not, then it is removed (data handling)
                // Start
-               bool lastDatapointValid = true;
                
-               int lastYear = Convert.ToInt32(dates[dates.Count - 1].Substring(0, 4));
-               int lastMonth = Convert.ToInt32(dates[dates.Count - 1].Substring(5, 2));
-               int lastDay = Convert.ToInt32(dates[dates.Count - 1].Substring(8, 2));
-                   
-               int pinultimateYear = Convert.ToInt32(dates[dates.Count - 2].Substring(0, 4));
-               int pinultimateMonth = Convert.ToInt32(dates[dates.Count - 2].Substring(5, 2));
-               int pinultimateDay = Convert.ToInt32(dates[dates.Count - 2].Substring(8, 2));
-                   
-                   DateTime lastDateTime = new DateTime(lastYear, lastMonth, lastDay );
-                   DateTime pinultimateDateTime = new DateTime(pinultimateYear, pinultimateMonth, pinultimateDay);
-                   
+               DateTime lastDateTime = ConvertDateTime(dates[^1]);
+               DateTime pinultimateDateTime = ConvertDateTime(dates[^2]);
+               
                if (lastDateTime.Subtract(pinultimateDateTime).Days != 7)
                {
                    dates.RemoveAt(dates.Count -1 );
                    timeSeriesList.RemoveAt(timeSeriesList.Count - 1);
-
-                   lastDatapointValid = false;
+                   
                }
                // End
+               
+               DateTime predictionDateTime = ConvertDateTime(dates[^1]);
+               predictionDateTime = predictionDateTime.AddDays(7); 
+               dates.Add($"{predictionDateTime.Year}-{predictionDateTime.Month}-{predictionDateTime.Day}");
+
+               TimeSeriesDataPoint timeSeriesListPrediction = new TimeSeriesDataPoint();
+               // Predictions
+               switch (prediction)
+               {
+                   case ("Naive"):
+                       timeSeriesListPrediction = timeSeriesList[^1];
+                       break;
+                   case ("MovingAverage"):
+                       //Add Code
+                       break;
+               }
+               
+               timeSeriesList.Add(timeSeriesListPrediction);
+               
                
                // Puts all datapoints and dates in one big string and formats them appropriately
                // Start (of formatting part)
@@ -115,56 +126,34 @@ public class IndexModel : PageModel
                LabelsData = "[" + $"'{dates[0]}'";
                for (int i = 1; i < timeSeriesList.Count; i++)
                {
-                   _logger.LogInformation("DataPoint " + i);
-                   _logger.LogInformation(timeSeriesList[i].ToString()); 
-                   _logger.LogInformation("");
-                
+                   /*
+                    Logs used for testing (useless):
+                       _logger.LogInformation("DataPoint " + i);
+                       _logger.LogInformation(timeSeriesList[i].ToString()); 
+                       _logger.LogInformation("");
+                   */
                 
                    CandlesData = CandlesData + ", " + timeSeriesList[i];
                    LabelsData = LabelsData + ", " + $"'{dates[i]}'";
 
                }
                
-               
-               // Naive prediction
-               // Start (of prediction)
-               CandlesData =  CandlesData + ", " + timeSeriesList[timeSeriesList.Count - 1];
-               DateTime naiveDateTime;
-               
-               if (lastDatapointValid)
-               {
-                   naiveDateTime = new DateTime(lastYear, lastMonth, lastDay);
-               }
-               else
-               {
-                   naiveDateTime = new DateTime(pinultimateYear, pinultimateMonth, pinultimateDay);
-               }
-               
-               naiveDateTime = naiveDateTime.AddDays(7);
-               LabelsData = LabelsData + ", " + $"'{naiveDateTime.Year}-{naiveDateTime.Month}-{naiveDateTime.Day}'";
-               // End (of prediction)
-               
-               
                LabelsData = LabelsData + "]";
                CandlesData = CandlesData + "]";
                // End (of formatting part)
                
                
-            
-               _logger.LogInformation($"The next price will be: {timeSeriesList[5].Close}");
+               
                /*
                 The C# part of the program interacts with the .cshtml files as if the html and javascript in that file is
                 one big string.
 
-               Example:
+               Example (order is: close, open, low, high):
                CandlesData = "[[20, 34, 10, 38],[40, 35, 30, 50],[31, 38, 33, 44],[38, 15, 5, 42]]";
                LabelsData = "['2017-10-24', '2017-10-25', '2017-10-26', '2017-10-27']";
                */
             
-               // order is: close, open, low, high
-               //CandlesData = "[[20, 34, 10, 38],[40, 35, 30, 50],[31, 38, 33, 44],[38, 15, 5, 42]]";
-               //LabelsData = "['2017-10-24', '2017-10-25', '2017-10-26', '2017-10-27', '2017-10-24', '2017-10-25', '2017-10-26', '2017-10-27']";
-
+               
            }
            
            
@@ -180,4 +169,18 @@ public class IndexModel : PageModel
         
         
     }
+    // Static means that you don't have to instantiate an object of the class that the method is from in order to use it. 
+    // It works for any class.
+    public static DateTime ConvertDateTime(string dateString)
+    {
+        int year = Convert.ToInt32(dateString.Substring(0, 4));
+        int month = Convert.ToInt32(dateString.Substring(5, 2));
+        int day = Convert.ToInt32(dateString.Substring(8, 2));
+        DateTime dateTime = new DateTime(year, month, day );
+                   
+        return dateTime;
+    }
+
+    
+    
 }
