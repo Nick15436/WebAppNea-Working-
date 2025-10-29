@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.IO;
+using Microsoft.ML;
 
 namespace WebAppNea.Pages;
 
@@ -105,7 +106,7 @@ public class IndexModel : PageModel
                predictionDateTime = predictionDateTime.AddDays(7); 
                dates.Add($"{predictionDateTime.Year}-{predictionDateTime.Month}-{predictionDateTime.Day}");
 
-               TimeSeriesDataPoint timeSeriesListPrediction = new TimeSeriesDataPoint();
+               TimeSeriesDataPoint timeSeriesListPrediction = new TimeSeriesDataPoint("0", "0", "0", "0", "0");
                // Predictions
                switch (prediction)
                {
@@ -114,6 +115,34 @@ public class IndexModel : PageModel
                        break;
                    case ("MovingAverage"):
                        //Add Code
+                       break;
+                   case ("MachineLearning"):
+                       //Create ML Context with seed for repeteable/deterministic results
+                       //By setting a seed, it means the randomness that's in it will be the same
+                       MLContext mlContext = new MLContext(seed: 0);
+                       
+                       // STEP 1: Common data loading configuration
+                       // Loading in the data that I am going to train the model with.
+                       IDataView trainingDataView = mlContext.Data.LoadFromEnumerable(timeSeriesList);
+                       
+                       // STEP 3: Set the training algorithm, then create and config the modelBuilder - Selected Trainer (SDCA Regression algorithm)                            
+                       var trainer = mlContext.Regression.Trainers.Sdca(labelColumnName: "Label", featureColumnName: "Features");
+                       
+                       var trainedModel = trainer.Fit(trainingDataView);
+                       
+                       // Create prediction engine related to the loaded trained model
+                       var predEngine = mlContext.Model.CreatePredictionEngine<ModelInput, ModelOutput>(trainedModel);
+
+                        // This is going to contain last x datapoints
+                       ModelInput inputTest = new ModelInput();
+                       
+                        //Score
+                       var resultprediction = predEngine.Predict(inputTest);
+
+                       string resultPredictionToString = resultprediction.ClosingPrice.ToString();
+                       
+                       timeSeriesListPrediction = new TimeSeriesDataPoint(resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString);
+
                        break;
                }
                
