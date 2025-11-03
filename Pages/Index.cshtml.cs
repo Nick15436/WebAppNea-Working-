@@ -123,12 +123,23 @@ public class IndexModel : PageModel
                        
                        // STEP 1: Common data loading configuration
                        // Loading in the data that I am going to train the model with.
+                       // Going to transform the data in timeSeriesList to be a list of ModelInputs.
                        IDataView trainingDataView = mlContext.Data.LoadFromEnumerable(timeSeriesList);
+                       
+                       // STEP 2: Common data process configuration with pipeline data transformations
+                       var dataProcessPipeline = mlContext.Transforms.Concatenate("Features", 
+                           "Open0", "High0", "Low0", "Close0", 
+                           "Open1", "High1", "Low1", "Close1", 
+                           "Open2", "High2", "Low2", "Close2", 
+                           "Open3", "High3", "Low3", "Close3", 
+                           "Open4", "High4", "Low4", "Close4");
+                       
                        
                        // STEP 3: Set the training algorithm, then create and config the modelBuilder - Selected Trainer (SDCA Regression algorithm)                            
                        var trainer = mlContext.Regression.Trainers.Sdca(labelColumnName: "Label", featureColumnName: "Features");
+                       var trainingPipeline = dataProcessPipeline.Append(trainer);
                        
-                       var trainedModel = trainer.Fit(trainingDataView);
+                       var trainedModel = trainingPipeline.Fit(trainingDataView);
                        
                        // Create prediction engine related to the loaded trained model
                        var predEngine = mlContext.Model.CreatePredictionEngine<ModelInput, ModelOutput>(trainedModel);
