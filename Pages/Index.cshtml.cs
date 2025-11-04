@@ -20,7 +20,7 @@ public class IndexModel : PageModel
         _httpClient = httpClient;
     }
 
-    public void OnGet( string prediction = "NoPrediction", string ticker = "AAPL")
+    public void OnGet( string prediction = "MovingAverage", string ticker = "AAPL")
     {
         try
         {
@@ -114,7 +114,21 @@ public class IndexModel : PageModel
                        timeSeriesListPrediction = timeSeriesList[^1];
                        break;
                    case ("MovingAverage"):
-                       //Add Code
+                       // Simple Moving Average: uses the last N closing prices to predict the next one
+                       // It creates a four price doji
+                       double averageClosingPrice = 0;
+                       for (int i = timeSeriesList.Count - 5; i < timeSeriesList.Count; i++)
+                       {
+                           averageClosingPrice += Convert.ToDouble(timeSeriesList[i].Close);
+                       }
+                       averageClosingPrice /= 5;
+
+                        //Can use "F2" format to get number rounded to 2 decimal points.
+                        // "F" means fixed point format
+                        // "2" means rounded to 2 d.p.
+                       string averageClosingPriceString = averageClosingPrice.ToString();
+                       timeSeriesListPrediction = new TimeSeriesDataPoint(averageClosingPriceString, averageClosingPriceString, averageClosingPriceString, averageClosingPriceString, averageClosingPriceString);
+                       
                        break;
                    case ("MachineLearning"):
                        //Create ML Context with seed for repeteable/deterministic results

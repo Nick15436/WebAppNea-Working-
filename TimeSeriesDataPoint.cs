@@ -36,7 +36,7 @@ public class TimeSeriesDataPoint
     //Converts datapoint to string and also puts it in correct format.
     public override string ToString()
     {
-        return $"[{Close}, {Open}, {Low}, {High}]";
+        return $"{{value:[{Open},{Close},{Low},{High}],itemStyle:{{color:'rgb(0,255,0)',color0:'rgb(0,0,255)',borderColor:'rgb(0,255,0)',borderColor0:'rgb(0,0,255)'}}}}";
     }
 
 
