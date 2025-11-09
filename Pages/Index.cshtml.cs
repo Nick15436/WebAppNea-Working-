@@ -90,7 +90,6 @@ public class IndexModel : PageModel
                // Code used to check whether the last datapoint is the correct interval away from the second to last one.
                // If not, then it is removed (data handling)
                // Start
-               
                DateTime lastDateTime = ConvertDateTime(dates[^1]);
                DateTime pinultimateDateTime = ConvertDateTime(dates[^2]);
                
@@ -130,15 +129,42 @@ public class IndexModel : PageModel
                        timeSeriesListPrediction = new TimeSeriesDataPoint(averageClosingPriceString, averageClosingPriceString, averageClosingPriceString, averageClosingPriceString, averageClosingPriceString);
                        
                        break;
-                   case ("MachineLearning"):
+                   case ("MachineLearningRegression"):
                        //Create ML Context with seed for repeteable/deterministic results
                        //By setting a seed, it means the randomness that's in it will be the same
                        MLContext mlContext = new MLContext(seed: 0);
                        
                        // STEP 1: Common data loading configuration
                        // Loading in the data that I am going to train the model with.
-                       // Going to transform the data in timeSeriesList to be a list of ModelInputs.
-                       IDataView trainingDataView = mlContext.Data.LoadFromEnumerable(timeSeriesList);
+                       // TODO: Going to transform the data in timeSeriesList to be a list of ModelInputs.
+
+                       ModelInputRegression modelInputRegressionItem = new ModelInputRegression();
+                       List<ModelInputRegression> modelInputRegressions = new List<ModelInputRegression>();
+
+                       for (int i = 0; i < timeSeriesList.Count; i += 5)
+                       {
+                           // skip: skips the first i elements in the list
+                           // Take: takes the next five elements in the list
+                           // The first iteration, you skip the first 0 elements, and take the next 5 (the first five)
+                           var groupOfFive = timeSeriesList.Skip(i).Take(5).ToList();
+                           
+                           modelInputRegressionItem = new ModelInputRegression()
+                           { 
+                               
+                               Open0 = float.Parse(groupOfFive[0].Open), High0 = float.Parse(groupOfFive[0].High), Low0 = float.Parse(groupOfFive[0].Low), Close0 = float.Parse(groupOfFive[0].Close),   
+                               Open1 = float.Parse(groupOfFive[1].Open), High1 = float.Parse(groupOfFive[1].High), Low1 = float.Parse(groupOfFive[1].Low), Close1 = float.Parse(groupOfFive[1].Close),
+                               Open2 = float.Parse(groupOfFive[2].Open), High2 = float.Parse(groupOfFive[2].High), Low2 = float.Parse(groupOfFive[2].Low), Close2 = float.Parse(groupOfFive[2].Close),
+                               Open3 = float.Parse(groupOfFive[3].Open), High3 = float.Parse(groupOfFive[3].High), Low3 = float.Parse(groupOfFive[3].Low), Close3 = float.Parse(groupOfFive[3].Close),
+                               Open4 = float.Parse(groupOfFive[4].Open), High4 = float.Parse(groupOfFive[4].High), Low4 = float.Parse(groupOfFive[4].Low), Close4 = float.Parse(groupOfFive[4].Close),
+                           
+                           };
+                           
+                           modelInputRegressions.Add(modelInputRegressionItem);
+                           
+                       }
+                       
+                       //changed from "timeSeriesList" to "modelInputRegressions"
+                       IDataView trainingDataView = mlContext.Data.LoadFromEnumerable(modelInputRegressions);
                        
                        // STEP 2: Common data process configuration with pipeline data transformations
                        var dataProcessPipeline = mlContext.Transforms.Concatenate("Features", 
@@ -156,18 +182,59 @@ public class IndexModel : PageModel
                        var trainedModel = trainingPipeline.Fit(trainingDataView);
                        
                        // Create prediction engine related to the loaded trained model
-                       var predEngine = mlContext.Model.CreatePredictionEngine<ModelInput, ModelOutput>(trainedModel);
+                       var predEngine = mlContext.Model.CreatePredictionEngine<ModelInputRegression, ModelOutputRegression>(trainedModel);
 
                         // This is going to contain last x datapoints
-                       ModelInput inputTest = new ModelInput();
+                       ModelInputRegression inputRegressionTest = new ModelInputRegression();
                        
                         //Score
-                       var resultprediction = predEngine.Predict(inputTest);
+                       var resultprediction = predEngine.Predict(inputRegressionTest);
 
                        string resultPredictionToString = resultprediction.ClosingPrice.ToString();
                        
                        timeSeriesListPrediction = new TimeSeriesDataPoint(resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString);
 
+                       break;
+                   case ("MachineLearningClassification"):
+                       //Create ML Context with seed for repeteable/deterministic results
+                       //By setting a seed, it means the randomness that's in it will be the same
+                       //The first time it runs, it is truly random, but the second time it runs, it displays the same thing as the first time.
+                       mlContext = new MLContext(seed: 0);
+                       
+                       // STEP 1: Common data loading configuration
+                       // Loading in the data that I am going to train the model with.
+                       // TODO: Going to transform the data in timeSeriesList to be a list of ModelInputs.
+                       trainingDataView = mlContext.Data.LoadFromEnumerable(timeSeriesList);
+                       
+                       // STEP 2: Common data process configuration with pipeline data transformations
+                       // Groups all the feature columns together into one shared column, called "features".
+                       dataProcessPipeline = mlContext.Transforms.Concatenate("Features", 
+                           "Open0", "High0", "Low0", "Close0", 
+                           "Open1", "High1", "Low1", "Close1", 
+                           "Open2", "High2", "Low2", "Close2", 
+                           "Open3", "High3", "Low3", "Close3", 
+                           "Open4", "High4", "Low4", "Close4");
+                       
+                       // STEP 3: Set the training algorithm, then create and config the modelBuilder - Selected Trainer (SDCA Regression algorithm)                            
+                       trainer = mlContext.Regression.Trainers.Sdca(labelColumnName: "Label", featureColumnName: "Features");
+                       trainingPipeline = dataProcessPipeline.Append(trainer);
+                       
+                       trainedModel = trainingPipeline.Fit(trainingDataView);
+                       
+                       // Create prediction engine related to the loaded trained model
+                       predEngine = mlContext.Model.CreatePredictionEngine<ModelInputRegression, ModelOutputRegression>(trainedModel);
+
+                       // This is going to contain last x datapoints
+                       inputRegressionTest = new ModelInputRegression();
+                       
+                       //Score
+                       resultprediction = predEngine.Predict(inputRegressionTest);
+
+                       resultPredictionToString = resultprediction.ClosingPrice.ToString();
+                       
+                       timeSeriesListPrediction = new TimeSeriesDataPoint(resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString);
+
+                       
                        break;
                }
                

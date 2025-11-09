@@ -1,9 +1,8 @@
 namespace WebAppNea;
-using Microsoft.ML.Data;
 
-public class ModelInput
+public class ModelInputClassification
 {
-    
+    // Features:
     public float Open0;
     public float High0;
     public float Low0;
@@ -29,6 +28,8 @@ public class ModelInput
     public float Low4;
     public float Close4;
 
-    public float Label;
+    // Target:
+    public string Label;
+    
 
 }
