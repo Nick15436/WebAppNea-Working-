@@ -28,9 +28,6 @@ public class TimeSeriesDataPoint
         Low = low;
         Close = close;
         Volume = volume;
-
-        
-
     }
     
     //Converts datapoint to string and also puts it in correct format.

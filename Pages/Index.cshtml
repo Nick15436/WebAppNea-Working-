@@ -4,52 +4,76 @@
     ViewData["Title"] = "Home page";
 }
 
-<ul class="nav nav-pills">
-    <li class="nav-item">
-        <a class="nav-link active" aria-current="page" href="/?ticker=AAPL">AAPL</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="/?ticker=GOOG">GOOG</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="/?ticker=AMZN">AMZN</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="/?ticker=MSFT">MSFT</a>
-    </li>
-</ul>
+<div class="container-fluid">
 
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav nav-underline">
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="/?ticker=AAPL">AAPL</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/?ticker=GOOG">GOOG</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/?ticker=AMZN">AMZN</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/?ticker=MSFT">MSFT</a>
+                </li>
+            </ul>
+        </div>
+    </div>
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+    <div class="row mt-3">
+
+        <div class="col-md-2" style="border-right: 1px solid #444;">
+            <h5>Drawing tools menu:</h5>
+            <p>(optional)</p>
+            <button class="btn btn-outline-secondary btn-sm mb-1 d-block">Line</button>
+            <button class="btn btn-outline-secondary btn-sm mb-1 d-block">Trend</button>
+            <button class="btn btn-outline-secondary btn-sm mb-1 d-block">Fib</button>
+        </div>
+
+        <div class="col-md-10">
+
+            @if (Model.ApiDataIsNull)
+            {
+                <p> Request limit hit. It does not work. NOT REAL-TIME DATA. </p>
+            }
+
+            <div id="main" style="width: 100%; height:650px;"></div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12" style="border-top: 1px solid #444; padding-top: 15px;">
+            <h5>Area for text:</h5>
+            <ul>
+                <li>show the timezone of the chart</li>
+                <li>display what different models show about the data</li>
+                <li>show whether the user should buy / sell overall</li>
+            </ul>
+        </div>
+    </div>
+
 </div>
-
-
-@if (Model.ApiDataIsNull)
-{
-    <p> Request limit hit. It does not work. NOT REAL-TIME DATA. </p>
-
-}
-
-
-<div id="main" style="width: 1200px;height:800px;"></div>
-
 
 <script type="text/javascript">
     // Initialise the echarts instance based on the prepared dom
     var myChart = echarts.init(document.getElementById('main'), 'dark');
 
-
     // Specify the configuration items and data for the chart
     var option = {
 
-        dataZoom: {type: 'slider'},
+        dataZoom: { type: 'slider' },
 
         grid:
-            {
-                width: 1000,
-            },
+        {
+            // Set grid width to be responsive within its container
+            width: '90%', 
+            left: '5%'
+        },
 
         tooltip: {
             trigger: 'axis',
@@ -57,7 +81,7 @@
                 type: 'line'
             }
         },
-            
+
         xAxis: {
             // The Asp library replaces certain characters with the corresponding html code in order to "help".
             //  Html.Raw tells the Asp to not help.
@@ -72,9 +96,10 @@
         ]
     };
 
-
     // Display the chart using the configuration items and data just specified.
     myChart.setOption(option);
-</script>
 
-    
+    // Make the chart resize with the window (important for responsive design)
+    window.addEventListener('resize', myChart.resize);
+
+</script>
