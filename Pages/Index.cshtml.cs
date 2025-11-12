@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.IO;
+using System.Reflection.Emit;
 using Microsoft.ML;
 
 namespace WebAppNea.Pages;
@@ -13,6 +14,9 @@ public class IndexModel : PageModel
     public string CandlesData;
     public string LabelsData;
     public bool ApiDataIsNull;
+    
+    public string CurrentPrediction { get; set; }
+    public string ActiveTicker { get; set; }
 
     public IndexModel(ILogger<IndexModel> logger, HttpClient httpClient)
     {
@@ -20,8 +24,12 @@ public class IndexModel : PageModel
         _httpClient = httpClient;
     }
 
-    public void OnGet( string prediction = "MovingAverage", string ticker = "AAPL")
+    public void OnGet( string prediction = "Naive", string ticker = "AAPL")
     {
+
+        CurrentPrediction = prediction;
+        ActiveTicker = ticker;
+        
         try
         {
             
@@ -50,8 +58,20 @@ public class IndexModel : PageModel
            _logger.LogInformation(response.StatusCode.ToString());
           // System.IO.File.WriteAllText("response.txt", responseContent);
 
-          // deserialises, meaning converts JSON to C# objects, which are easy to access
-           ApiData apiData = JsonSerializer.Deserialize<ApiData>(responseContent);
+          ApiData apiData;  
+          
+          try
+          {
+              // deserialises, meaning converts JSON to C# objects, which are easy to access
+              apiData = JsonSerializer.Deserialize<ApiData>(responseContent);
+          }
+          catch
+          {
+             responseContent = System.IO.File.ReadAllText("response.txt");
+             apiData = JsonSerializer.Deserialize<ApiData>(responseContent);
+          }
+
+          
 
            if (apiData.TimeSeries == null)
            {
@@ -110,131 +130,16 @@ public class IndexModel : PageModel
                switch (prediction)
                {
                    case ("Naive"):
-                       timeSeriesListPrediction = timeSeriesList[^1];
+                      timeSeriesListPrediction = NaivePrediction(timeSeriesList);
                        break;
                    case ("MovingAverage"):
-                       // Simple Moving Average: uses the last N closing prices to predict the next one
-                       // It creates a four price doji
-                       double averageClosingPrice = 0;
-                       for (int i = timeSeriesList.Count - 5; i < timeSeriesList.Count; i++)
-                       {
-                           averageClosingPrice += Convert.ToDouble(timeSeriesList[i].Close);
-                       }
-                       averageClosingPrice /= 5;
-
-                        //Can use "F2" format to get number rounded to 2 decimal points.
-                        // "F" means fixed point format
-                        // "2" means rounded to 2 d.p.
-                       string averageClosingPriceString = averageClosingPrice.ToString();
-                       timeSeriesListPrediction = new TimeSeriesDataPoint(averageClosingPriceString, averageClosingPriceString, averageClosingPriceString, averageClosingPriceString, averageClosingPriceString);
-                       
+                       timeSeriesListPrediction = SimpleMovingAverage(timeSeriesList);
                        break;
                    case ("MachineLearningRegression"):
-                       //Create ML Context with seed for repeteable/deterministic results
-                       //By setting a seed, it means the randomness that's in it will be the same
-                       MLContext mlContext = new MLContext(seed: 0);
-                       
-                       // STEP 1: Common data loading configuration
-                       // Loading in the data that I am going to train the model with.
-                       // TODO: Going to transform the data in timeSeriesList to be a list of ModelInputs.
-
-                       ModelInputRegression modelInputRegressionItem = new ModelInputRegression();
-                       List<ModelInputRegression> modelInputRegressions = new List<ModelInputRegression>();
-
-                       for (int i = 0; i < timeSeriesList.Count; i += 5)
-                       {
-                           // skip: skips the first i elements in the list
-                           // Take: takes the next five elements in the list
-                           // The first iteration, you skip the first 0 elements, and take the next 5 (the first five)
-                           var groupOfFive = timeSeriesList.Skip(i).Take(5).ToList();
-                           
-                           modelInputRegressionItem = new ModelInputRegression()
-                           { 
-                               
-                               Open0 = float.Parse(groupOfFive[0].Open), High0 = float.Parse(groupOfFive[0].High), Low0 = float.Parse(groupOfFive[0].Low), Close0 = float.Parse(groupOfFive[0].Close),   
-                               Open1 = float.Parse(groupOfFive[1].Open), High1 = float.Parse(groupOfFive[1].High), Low1 = float.Parse(groupOfFive[1].Low), Close1 = float.Parse(groupOfFive[1].Close),
-                               Open2 = float.Parse(groupOfFive[2].Open), High2 = float.Parse(groupOfFive[2].High), Low2 = float.Parse(groupOfFive[2].Low), Close2 = float.Parse(groupOfFive[2].Close),
-                               Open3 = float.Parse(groupOfFive[3].Open), High3 = float.Parse(groupOfFive[3].High), Low3 = float.Parse(groupOfFive[3].Low), Close3 = float.Parse(groupOfFive[3].Close),
-                               Open4 = float.Parse(groupOfFive[4].Open), High4 = float.Parse(groupOfFive[4].High), Low4 = float.Parse(groupOfFive[4].Low), Close4 = float.Parse(groupOfFive[4].Close),
-                           
-                           };
-                           
-                           modelInputRegressions.Add(modelInputRegressionItem);
-                           
-                       }
-                       
-                       //changed from "timeSeriesList" to "modelInputRegressions"
-                       IDataView trainingDataView = mlContext.Data.LoadFromEnumerable(modelInputRegressions);
-                       
-                       // STEP 2: Common data process configuration with pipeline data transformations
-                       var dataProcessPipeline = mlContext.Transforms.Concatenate("Features", 
-                           "Open0", "High0", "Low0", "Close0", 
-                           "Open1", "High1", "Low1", "Close1", 
-                           "Open2", "High2", "Low2", "Close2", 
-                           "Open3", "High3", "Low3", "Close3", 
-                           "Open4", "High4", "Low4", "Close4");
-                       
-                       
-                       // STEP 3: Set the training algorithm, then create and config the modelBuilder - Selected Trainer (SDCA Regression algorithm)                            
-                       var trainer = mlContext.Regression.Trainers.Sdca(labelColumnName: "Label", featureColumnName: "Features");
-                       var trainingPipeline = dataProcessPipeline.Append(trainer);
-                       
-                       var trainedModel = trainingPipeline.Fit(trainingDataView);
-                       
-                       // Create prediction engine related to the loaded trained model
-                       var predEngine = mlContext.Model.CreatePredictionEngine<ModelInputRegression, ModelOutputRegression>(trainedModel);
-
-                        // This is going to contain last x datapoints
-                       ModelInputRegression inputRegressionTest = new ModelInputRegression();
-                       
-                        //Score
-                       var resultprediction = predEngine.Predict(inputRegressionTest);
-
-                       string resultPredictionToString = resultprediction.ClosingPrice.ToString();
-                       
-                       timeSeriesListPrediction = new TimeSeriesDataPoint(resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString);
-
+                       timeSeriesListPrediction = MachineLearningRegression(timeSeriesList);
                        break;
                    case ("MachineLearningClassification"):
-                       //Create ML Context with seed for repeteable/deterministic results
-                       //By setting a seed, it means the randomness that's in it will be the same
-                       //The first time it runs, it is truly random, but the second time it runs, it displays the same thing as the first time.
-                       mlContext = new MLContext(seed: 0);
-                       
-                       // STEP 1: Common data loading configuration
-                       // Loading in the data that I am going to train the model with.
-                       // TODO: Going to transform the data in timeSeriesList to be a list of ModelInputs.
-                       trainingDataView = mlContext.Data.LoadFromEnumerable(timeSeriesList);
-                       
-                       // STEP 2: Common data process configuration with pipeline data transformations
-                       // Groups all the feature columns together into one shared column, called "features".
-                       dataProcessPipeline = mlContext.Transforms.Concatenate("Features", 
-                           "Open0", "High0", "Low0", "Close0", 
-                           "Open1", "High1", "Low1", "Close1", 
-                           "Open2", "High2", "Low2", "Close2", 
-                           "Open3", "High3", "Low3", "Close3", 
-                           "Open4", "High4", "Low4", "Close4");
-                       
-                       // STEP 3: Set the training algorithm, then create and config the modelBuilder - Selected Trainer (SDCA Regression algorithm)                            
-                       trainer = mlContext.Regression.Trainers.Sdca(labelColumnName: "Label", featureColumnName: "Features");
-                       trainingPipeline = dataProcessPipeline.Append(trainer);
-                       
-                       trainedModel = trainingPipeline.Fit(trainingDataView);
-                       
-                       // Create prediction engine related to the loaded trained model
-                       predEngine = mlContext.Model.CreatePredictionEngine<ModelInputRegression, ModelOutputRegression>(trainedModel);
-
-                       // This is going to contain last x datapoints
-                       inputRegressionTest = new ModelInputRegression();
-                       
-                       //Score
-                       resultprediction = predEngine.Predict(inputRegressionTest);
-
-                       resultPredictionToString = resultprediction.ClosingPrice.ToString();
-                       
-                       timeSeriesListPrediction = new TimeSeriesDataPoint(resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString);
-
-                       
+                       _logger.LogInformation(MachineLearningClassification(timeSeriesList));
                        break;
                }
                
@@ -302,6 +207,233 @@ public class IndexModel : PageModel
         return dateTime;
     }
 
+    public static TimeSeriesDataPoint NaivePrediction(List<TimeSeriesDataPoint> timeSeriesList)
+    {
+        var timeSeriesListPrediction = timeSeriesList[^1];
+
+        return timeSeriesListPrediction;
+    }
+
+    public static TimeSeriesDataPoint SimpleMovingAverage(List<TimeSeriesDataPoint> timeSeriesList)
+    {
+        // Simple Moving Average: uses the last N closing prices to predict the next one
+        // It creates a four price doji
+        double averageOpeningPrice = 0;
+        double averageHighPrice = 0;
+        double averageLowPrice = 0;
+        double averageClosingPrice = 0;
+        for (int i = timeSeriesList.Count - 5; i < timeSeriesList.Count; i++)
+        {
+            averageOpeningPrice += Convert.ToDouble(timeSeriesList[i].Open);
+            averageHighPrice += Convert.ToDouble(timeSeriesList[i].High);
+            averageLowPrice += Convert.ToDouble(timeSeriesList[i].Low);
+            averageClosingPrice += Convert.ToDouble(timeSeriesList[i].Close);
+        }
+
+        averageOpeningPrice /= 5;
+        averageHighPrice /= 5;
+        averageLowPrice /= 5;
+        averageClosingPrice /= 5;
+
+        //Can use "F2" format to get number rounded to 2 decimal points.
+        // "F" means fixed point format
+        // "2" means rounded to 2 d.p.
+        string averageOpeningPriceString = averageOpeningPrice.ToString();
+        string averageHighPriceString = averageHighPrice.ToString();
+        string averageLowPriceString = averageLowPrice.ToString();
+        string averageClosingPriceString = averageClosingPrice.ToString();
+
+        TimeSeriesDataPoint timeSeriesListPrediction = new TimeSeriesDataPoint(averageOpeningPriceString,
+            averageHighPriceString, averageLowPriceString, averageClosingPriceString, "");
+        
+        return timeSeriesListPrediction;
+    }
+
+    public static TimeSeriesDataPoint MachineLearningRegression(List<TimeSeriesDataPoint> timeSeriesList)
+    {
+         //Create ML Context with seed for repeteable/deterministic results
+                       //By setting a seed, it means the randomness that's in it will be the same
+                       MLContext mlContext = new MLContext(seed: 0);
+                       
+                       // STEP 1: Common data loading configuration
+                       // Loading in the data that I am going to train the model with.
+                       // TODO: Going to transform the data in timeSeriesList to be a list of ModelInputs.
+
+                       ModelInputRegression modelInputRegressionItem = new ModelInputRegression();
+                       List<ModelInputRegression> modelInputRegressions = new List<ModelInputRegression>();
+
+                       for (int i = 0; i < timeSeriesList.Count - 6; i++)
+                       {
+                           // skip: skips the first i elements in the list
+                           // Take: takes the next five elements in the list
+                           // The first iteration, you skip the first 0 elements, and take the next 5 (the first five)
+                           var groupOfSix = timeSeriesList.Skip(i).Take(6).ToList();
+                           
+                           modelInputRegressionItem = new ModelInputRegression()
+                           { 
+                               
+                               Open0 = float.Parse(groupOfSix[0].Open), High0 = float.Parse(groupOfSix[0].High), Low0 = float.Parse(groupOfSix[0].Low), Close0 = float.Parse(groupOfSix[0].Close),   
+                               Open1 = float.Parse(groupOfSix[1].Open), High1 = float.Parse(groupOfSix[1].High), Low1 = float.Parse(groupOfSix[1].Low), Close1 = float.Parse(groupOfSix[1].Close),
+                               Open2 = float.Parse(groupOfSix[2].Open), High2 = float.Parse(groupOfSix[2].High), Low2 = float.Parse(groupOfSix[2].Low), Close2 = float.Parse(groupOfSix[2].Close),
+                               Open3 = float.Parse(groupOfSix[3].Open), High3 = float.Parse(groupOfSix[3].High), Low3 = float.Parse(groupOfSix[3].Low), Close3 = float.Parse(groupOfSix[3].Close),
+                               Open4 = float.Parse(groupOfSix[4].Open), High4 = float.Parse(groupOfSix[4].High), Low4 = float.Parse(groupOfSix[4].Low), Close4 = float.Parse(groupOfSix[4].Close),
+                                
+                               Label = float.Parse(groupOfSix[5].Close)
+                           };
+                           
+                           modelInputRegressions.Add(modelInputRegressionItem);
+                           
+                       }
+                       
+                       //changed from "timeSeriesList" to "modelInputRegressions"
+                       IDataView trainingDataView = mlContext.Data.LoadFromEnumerable(modelInputRegressions);
+                       
+                       // STEP 2: Common data process configuration with pipeline data transformations
+                       var dataProcessPipeline = mlContext.Transforms.Concatenate("Features", 
+                           "Open0", "High0", "Low0", "Close0", 
+                           "Open1", "High1", "Low1", "Close1", 
+                           "Open2", "High2", "Low2", "Close2", 
+                           "Open3", "High3", "Low3", "Close3", 
+                           "Open4", "High4", "Low4", "Close4");
+                       
+                       
+                       // STEP 3: Set the training algorithm, then create and config the modelBuilder - Selected Trainer (SDCA Regression algorithm)                            
+                       var trainer = mlContext.Regression.Trainers.Sdca(labelColumnName: "Label", featureColumnName: "Features");
+                       var trainingPipeline = dataProcessPipeline.Append(trainer);
+                       
+                       var trainedModel = trainingPipeline.Fit(trainingDataView);
+                       
+                       // Create prediction engine related to the loaded trained model
+                       var predEngine = mlContext.Model.CreatePredictionEngine<ModelInputRegression, ModelOutputRegression>(trainedModel);
+                       
+                       // This is going to contain last x datapoints
+                       // TODO get the last x datapoints
+                       List<TimeSeriesDataPoint> groupOfFive = timeSeriesList.Skip(timeSeriesList.Count - 6).Take(5).ToList();
+                       ModelInputRegression mostRecentModelInput = new ModelInputRegression()
+                       {
+                           Open0 = float.Parse(groupOfFive[0].Open), High0 = float.Parse(groupOfFive[0].High),
+                           Low0 = float.Parse(groupOfFive[0].Low), Close0 = float.Parse(groupOfFive[0].Close),
+                           Open1 = float.Parse(groupOfFive[1].Open), High1 = float.Parse(groupOfFive[1].High),
+                           Low1 = float.Parse(groupOfFive[1].Low), Close1 = float.Parse(groupOfFive[1].Close),
+                           Open2 = float.Parse(groupOfFive[2].Open), High2 = float.Parse(groupOfFive[2].High),
+                           Low2 = float.Parse(groupOfFive[2].Low), Close2 = float.Parse(groupOfFive[2].Close),
+                           Open3 = float.Parse(groupOfFive[3].Open), High3 = float.Parse(groupOfFive[3].High),
+                           Low3 = float.Parse(groupOfFive[3].Low), Close3 = float.Parse(groupOfFive[3].Close),
+                           Open4 = float.Parse(groupOfFive[4].Open), High4 = float.Parse(groupOfFive[4].High),
+                           Low4 = float.Parse(groupOfFive[4].Low), Close4 = float.Parse(groupOfFive[4].Close),
+                       };
+                       
+                        //Score
+                       var resultprediction = predEngine.Predict(mostRecentModelInput);
+
+                       string resultPredictionToString = resultprediction.ClosingPrice.ToString();
+                       
+                      var timeSeriesListPrediction = new TimeSeriesDataPoint(resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString);
+                      
+                       return timeSeriesListPrediction;
+    }
     
-    
+    public static String MachineLearningClassification(List<TimeSeriesDataPoint> timeSeriesList)
+    {
+                        //Create ML Context with seed for repeteable/deterministic results
+                       //By setting a seed, it means the randomness that's in it will be the same
+                       MLContext mlContext = new MLContext(seed: 0);
+                       
+                       // STEP 1: Common data loading configuration
+                       // Loading in the data that I am going to train the model with.
+                       // TODO: Going to transform the data in timeSeriesList to be a list of ModelInputs.
+
+                       ModelInputClassification modelInputItem = new ModelInputClassification();
+                       List<ModelInputClassification> modelInputs = new List<ModelInputClassification>();
+
+                       for (int i = 0; i < timeSeriesList.Count - 6; i++)
+                       {
+                           // skip: skips the first i elements in the list
+                           // Take: takes the next five elements in the list
+                           // The first iteration, you skip the first 0 elements, and take the next 5 (the first five)
+                           var groupOfSix = timeSeriesList.Skip(i).Take(6).ToList();
+
+                           string trend;
+                           
+                           if (float.Parse(groupOfSix[4].Close) < float.Parse(groupOfSix[5].Close))
+                           {
+                               trend = "Up";
+                           }
+                           else if (float.Parse(groupOfSix[4].Close) > float.Parse(groupOfSix[5].Close))
+                           { 
+                               trend = "down";
+                           }
+                           else
+                           { 
+                               trend = "neutral";
+                           }
+                           
+                           
+                           modelInputItem = new ModelInputClassification()
+                           { 
+                               
+                               Open0 = float.Parse(groupOfSix[0].Open), High0 = float.Parse(groupOfSix[0].High), Low0 = float.Parse(groupOfSix[0].Low), Close0 = float.Parse(groupOfSix[0].Close),   
+                               Open1 = float.Parse(groupOfSix[1].Open), High1 = float.Parse(groupOfSix[1].High), Low1 = float.Parse(groupOfSix[1].Low), Close1 = float.Parse(groupOfSix[1].Close),
+                               Open2 = float.Parse(groupOfSix[2].Open), High2 = float.Parse(groupOfSix[2].High), Low2 = float.Parse(groupOfSix[2].Low), Close2 = float.Parse(groupOfSix[2].Close),
+                               Open3 = float.Parse(groupOfSix[3].Open), High3 = float.Parse(groupOfSix[3].High), Low3 = float.Parse(groupOfSix[3].Low), Close3 = float.Parse(groupOfSix[3].Close),
+                               Open4 = float.Parse(groupOfSix[4].Open), High4 = float.Parse(groupOfSix[4].High), Low4 = float.Parse(groupOfSix[4].Low), Close4 = float.Parse(groupOfSix[4].Close),
+                                
+                               Label = trend
+                           };
+                           
+                           modelInputs.Add(modelInputItem);
+                           
+                       }
+                       
+                       //changed from "timeSeriesList" to "modelInputs"
+                       IDataView trainingDataView = mlContext.Data.LoadFromEnumerable(modelInputs);
+                       
+                       // STEP 2: Common data process configuration with pipeline data transformations
+                       var dataProcessPipeline = mlContext.Transforms.Concatenate("Features", 
+                           "Open0", "High0", "Low0", "Close0", 
+                           "Open1", "High1", "Low1", "Close1", 
+                           "Open2", "High2", "Low2", "Close2", 
+                           "Open3", "High3", "Low3", "Close3", 
+                           "Open4", "High4", "Low4", "Close4")
+                           .Append(mlContext.Transforms.Conversion.MapValueToKey("Label"));
+                       
+                       
+                       // STEP 3: Set the training algorithm, then create and config the modelBuilder - Selected Trainer (SDCA Classification algorithm)
+                       // Sdca maximum entropy gives the probabilities of each trend happening, as well as giving the prediction.
+                       var trainer = mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy(labelColumnName: "Label", featureColumnName: "Features");
+                       var trainingPipeline = dataProcessPipeline
+                           .Append(trainer)
+                           .Append(mlContext.Transforms.Conversion.MapKeyToValue("Direction"));
+                       
+                       var trainedModel = trainingPipeline.Fit(trainingDataView);
+                       
+                       // Create prediction engine related to the loaded trained model
+                       var predEngine = mlContext.Model.CreatePredictionEngine<ModelInputClassification, ModelOutputClassification>(trainedModel);
+                       
+                       // This is going to contain last x datapoints
+                       // TODO get the last x datapoints
+                       List<TimeSeriesDataPoint> groupOfFive = timeSeriesList.Skip(timeSeriesList.Count - 6).Take(5).ToList();
+                       ModelInputClassification mostRecentModelInput = new ModelInputClassification()
+                       {
+                           Open0 = float.Parse(groupOfFive[0].Open), High0 = float.Parse(groupOfFive[0].High),
+                           Low0 = float.Parse(groupOfFive[0].Low), Close0 = float.Parse(groupOfFive[0].Close),
+                           Open1 = float.Parse(groupOfFive[1].Open), High1 = float.Parse(groupOfFive[1].High),
+                           Low1 = float.Parse(groupOfFive[1].Low), Close1 = float.Parse(groupOfFive[1].Close),
+                           Open2 = float.Parse(groupOfFive[2].Open), High2 = float.Parse(groupOfFive[2].High),
+                           Low2 = float.Parse(groupOfFive[2].Low), Close2 = float.Parse(groupOfFive[2].Close),
+                           Open3 = float.Parse(groupOfFive[3].Open), High3 = float.Parse(groupOfFive[3].High),
+                           Low3 = float.Parse(groupOfFive[3].Low), Close3 = float.Parse(groupOfFive[3].Close),
+                           Open4 = float.Parse(groupOfFive[4].Open), High4 = float.Parse(groupOfFive[4].High),
+                           Low4 = float.Parse(groupOfFive[4].Low), Close4 = float.Parse(groupOfFive[4].Close),
+                       };
+                       
+                        //Score
+                       var resultprediction = predEngine.Predict(mostRecentModelInput);
+
+                       string resultPredictionToString = resultprediction.Direction;
+
+                       return resultPredictionToString;
+    }
+
+
 }

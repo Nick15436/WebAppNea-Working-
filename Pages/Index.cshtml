@@ -4,11 +4,17 @@
     ViewData["Title"] = "Home page";
 }
 
-<div class="container-fluid">
+<div class="container-fluid bg-black text-light pt-3">
 
+    <!-- Row 1: Top Menu -->
     <div class="row">
-        <div class="col-12">
-            <ul class="nav nav-underline">
+        <!-- 
+            ADDED: 'bg-dark', 'p-3', 'rounded'
+            This creates the dark rectangle with padding and rounded corners.
+        -->
+        <div class="col-12 bg-dark p-3 rounded d-flex justify-content-between align-items-center">
+           
+            <ul class="nav nav-underline mb-0" data-bs-theme="dark">
                 <li class="nav-item">
                     <a class="nav-link active" aria-current="page" href="/?ticker=AAPL">AAPL</a>
                 </li>
@@ -22,19 +28,21 @@
                     <a class="nav-link" href="/?ticker=MSFT">MSFT</a>
                 </li>
             </ul>
+
+
+            <div>
+                <!-- 'btn btn-primary' makes the button blue with white text -->
+                <a href="#" class="btn btn-primary">Log In</a>
+                <!-- 'ms-2' adds a small margin (margin-start) between the buttons -->
+                <a href="#" class="btn btn-primary ms-2">History</a>
+            </div>
+            
         </div>
     </div>
 
-    <div class="row mt-3">
-
-        <div class="col-md-2" style="border-right: 1px solid #444;">
-            <h5>Drawing tools menu:</h5>
-            <p>(optional)</p>
-            <button class="btn btn-outline-secondary btn-sm mb-1 d-block">Line</button>
-            <button class="btn btn-outline-secondary btn-sm mb-1 d-block">Trend</button>
-            <button class="btn btn-outline-secondary btn-sm mb-1 d-block">Fib</button>
-        </div>
-
+    <!-- Row 2: Chart -->
+    <div class="row mt-3 justify-content-center">
+        
         <div class="col-md-10">
 
             @if (Model.ApiDataIsNull)
@@ -46,18 +54,38 @@
         </div>
     </div>
 
+    <!-- Row 3: Bottom Menu -->
     <div class="row mt-3">
-        <div class="col-12" style="border-top: 1px solid #444; padding-top: 15px;">
+        <div class="col-12 bg-dark text-light p-3 justify-content-between align-items-center">
+            
             <h5>Area for text:</h5>
             <ul>
                 <li>show the timezone of the chart</li>
                 <li>display what different models show about the data</li>
                 <li>show whether the user should buy / sell overall</li>
+                <li><strong>Current Model:</strong> @Model.CurrentPrediction</li>
             </ul>
+            
+            
+            
+            <div class="col-1 dropdown">
+                
+                <button class="btn btn-info dropdown-toggle" type="button" id="predictionDropdown" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false">
+                    Change Prediction Model
+                </button>
+                
+                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="predictionDropdown" data-bs-theme="dark">
+                    <li><a class="dropdown-item @(Model.CurrentPrediction == "Naive" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=Naive">Naive</a></li>
+                    <li><a class="dropdown-item @(Model.CurrentPrediction == "MovingAverage" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=MovingAverage">Simple Moving Average</a></li>
+                    <li><a class="dropdown-item @(Model.CurrentPrediction == "MachineLearningRegression" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=MachineLearningRegression">ML Regression</a></li>
+                    <li><a class="dropdown-item @(Model.CurrentPrediction == "MachineLearningClassification" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=MachineLearningClassification">ML Classification</a></li>
+                </ul>
+            </div>
         </div>
     </div>
 
 </div>
+
 
 <script type="text/javascript">
     // Initialise the echarts instance based on the prepared dom
