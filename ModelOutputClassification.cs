@@ -3,5 +3,6 @@ using Microsoft.ML.Data;
 
 public class ModelOutputClassification
 {
-    public string Direction;
+    public string PredictedLabel;
+    public float[] Score;
 }

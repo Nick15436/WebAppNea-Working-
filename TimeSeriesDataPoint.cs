@@ -15,19 +15,17 @@ public class TimeSeriesDataPoint
     [JsonPropertyName("3. low")]
     public string Low { get; set; }
     
+    // "Adjusted" price: 5. adjusted close
     [JsonPropertyName("4. close")]
     public string Close { get; set; }
     
-    [JsonPropertyName("5. volume")]
-    public string Volume { get; set; }
 
-    public TimeSeriesDataPoint(string open, string high, string low, string close, string volume)
+    public TimeSeriesDataPoint(string open, string high, string low, string close)
     {
         Open = open;
         High = high;
         Low = low;
         Close = close;
-        Volume = volume;
     }
     
     //Converts datapoint to string and also puts it in correct format.

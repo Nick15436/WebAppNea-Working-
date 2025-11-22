@@ -7,7 +7,7 @@ public class ApiData
     [JsonPropertyName("Meta Data")]
     public ApiMetadata Metadata { get; set; }
 
-    [JsonPropertyName("Weekly Time Series")]
+    [JsonPropertyName("Weekly Adjusted Time Series")]
     public Dictionary<string, TimeSeriesDataPoint> TimeSeries { get; set; } 
 
 }

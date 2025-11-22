@@ -24,7 +24,7 @@ public class IndexModel : PageModel
         _httpClient = httpClient;
     }
 
-    public void OnGet( string prediction = "Naive", string ticker = "AAPL")
+    public void OnGet( string prediction = "No Prediction", string ticker = "AAPL")
     {
 
         CurrentPrediction = prediction;
@@ -41,7 +41,7 @@ public class IndexModel : PageModel
             string apiKey = reader.ReadToEnd();
 
             
-            string url = $"https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY&symbol={ticker}&apikey={apiKey}";
+            string url = $"https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY_ADJUSTED&symbol={ticker}&apikey={apiKey}";
 
            
 
@@ -125,21 +125,27 @@ public class IndexModel : PageModel
                predictionDateTime = predictionDateTime.AddDays(7); 
                dates.Add($"{predictionDateTime.Year}-{predictionDateTime.Month}-{predictionDateTime.Day}");
 
-               TimeSeriesDataPoint timeSeriesListPrediction = new TimeSeriesDataPoint("0", "0", "0", "0", "0");
+               TimeSeriesDataPoint timeSeriesListPrediction = new TimeSeriesDataPoint("0", "0", "0", "0");
                // Predictions
                switch (prediction)
                {
                    case ("Naive"):
                       timeSeriesListPrediction = NaivePrediction(timeSeriesList);
                        break;
-                   case ("MovingAverage"):
+                   case ("Moving Average"):
                        timeSeriesListPrediction = SimpleMovingAverage(timeSeriesList);
                        break;
-                   case ("MachineLearningRegression"):
+                   case ("Linear Regression"):
+                       timeSeriesListPrediction = LinearRegression(timeSeriesList);
+                       break;
+                   case ("Machine Learning Regression"):
                        timeSeriesListPrediction = MachineLearningRegression(timeSeriesList);
                        break;
-                   case ("MachineLearningClassification"):
+                   case ("Machine Learning Classification"):
                        _logger.LogInformation(MachineLearningClassification(timeSeriesList));
+                       break;
+                   case ("Ensemble Model"):
+                       timeSeriesListPrediction = EnsembleModel(timeSeriesList);
                        break;
                }
                
@@ -217,7 +223,6 @@ public class IndexModel : PageModel
     public static TimeSeriesDataPoint SimpleMovingAverage(List<TimeSeriesDataPoint> timeSeriesList)
     {
         // Simple Moving Average: uses the last N closing prices to predict the next one
-        // It creates a four price doji
         double averageOpeningPrice = 0;
         double averageHighPrice = 0;
         double averageLowPrice = 0;
@@ -244,7 +249,7 @@ public class IndexModel : PageModel
         string averageClosingPriceString = averageClosingPrice.ToString();
 
         TimeSeriesDataPoint timeSeriesListPrediction = new TimeSeriesDataPoint(averageOpeningPriceString,
-            averageHighPriceString, averageLowPriceString, averageClosingPriceString, "");
+            averageHighPriceString, averageLowPriceString, averageClosingPriceString);
         
         return timeSeriesListPrediction;
     }
@@ -328,12 +333,12 @@ public class IndexModel : PageModel
 
                        string resultPredictionToString = resultprediction.ClosingPrice.ToString();
                        
-                      var timeSeriesListPrediction = new TimeSeriesDataPoint(resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString);
+                      var timeSeriesListPrediction = new TimeSeriesDataPoint(resultPredictionToString, resultPredictionToString, resultPredictionToString, resultPredictionToString);
                       
                        return timeSeriesListPrediction;
     }
     
-    public static String MachineLearningClassification(List<TimeSeriesDataPoint> timeSeriesList)
+    public String MachineLearningClassification(List<TimeSeriesDataPoint> timeSeriesList)
     {
                         //Create ML Context with seed for repeteable/deterministic results
                        //By setting a seed, it means the randomness that's in it will be the same
@@ -403,7 +408,7 @@ public class IndexModel : PageModel
                        var trainer = mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy(labelColumnName: "Label", featureColumnName: "Features");
                        var trainingPipeline = dataProcessPipeline
                            .Append(trainer)
-                           .Append(mlContext.Transforms.Conversion.MapKeyToValue("Direction"));
+                           .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
                        
                        var trainedModel = trainingPipeline.Fit(trainingDataView);
                        
@@ -430,10 +435,22 @@ public class IndexModel : PageModel
                         //Score
                        var resultprediction = predEngine.Predict(mostRecentModelInput);
 
-                       string resultPredictionToString = resultprediction.Direction;
+                       string resultPredictionToString = resultprediction.PredictedLabel;
+                       
+                       _logger.LogInformation(string.Join("," , resultprediction.Score));
 
                        return resultPredictionToString;
     }
 
-
+    public static TimeSeriesDataPoint LinearRegression(List<TimeSeriesDataPoint> timeSeriesList)
+    {
+        TimeSeriesDataPoint timeSeriesPrediction = new TimeSeriesDataPoint("","","","");
+        return timeSeriesPrediction;
+    }
+    
+    public static TimeSeriesDataPoint EnsembleModel(List<TimeSeriesDataPoint> timeSeriesList)
+    {
+        TimeSeriesDataPoint timeSeriesPrediction = new TimeSeriesDataPoint("","","","");
+        return timeSeriesPrediction;
+    }
 }
