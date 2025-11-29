@@ -15,10 +15,11 @@ public class TimeSeriesDataPoint
     [JsonPropertyName("3. low")]
     public string Low { get; set; }
     
-    // "Adjusted" price: 5. adjusted close
     [JsonPropertyName("4. close")]
     public string Close { get; set; }
     
+    [JsonPropertyName("5. adjusted close")]
+    public string AdjustedClose { get; set; }
 
     public TimeSeriesDataPoint(string open, string high, string low, string close)
     {
@@ -31,7 +32,7 @@ public class TimeSeriesDataPoint
     //Converts datapoint to string and also puts it in correct format.
     public override string ToString()
     {
-        return $"{{value:[{Open},{Close},{Low},{High}],itemStyle:{{color:'rgb(0,255,0)',color0:'rgb(0,0,255)',borderColor:'rgb(0,255,0)',borderColor0:'rgb(0,0,255)'}}}}";
+        return $"[{Open},{Close},{Low},{High}]";
     }
 
 

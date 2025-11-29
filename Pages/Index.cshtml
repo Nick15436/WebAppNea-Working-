@@ -63,9 +63,42 @@
                 <li>show the timezone of the chart</li>
                 <li>display what different models show about the data</li>
                 <li>show whether the user should buy / sell overall</li>
-                <li><strong>Current Model:</strong> @Model.CurrentPrediction</li>
+                <li><strong>Current Model:</strong> 
+                    @{
+                        string displayModel;
+                        switch (Model.CurrentPrediction)
+                        {
+                            case "MovingAverage":
+                                displayModel = "Simple Moving Average";
+                                break;
+                            case "MachineLearningRegression":
+                                displayModel = "Machine Learning Regression";
+                                break;
+                            case "MachineLearningClassification":
+                                displayModel = "Machine Learning Classification";
+                                break;
+                            case "LinearRegression":
+                                displayModel = "Linear regression";
+                                break;
+                            case "EnsembleModel":
+                                displayModel = "Ensemble Model";
+                                break;
+                            default:
+                                displayModel = Model.CurrentPrediction; 
+                                break;
+                        }
+                    }
+                    @displayModel
+                </li>
             </ul>
-            
+            @{
+                if (Model.CurrentPrediction == "MachineLearningClassification")
+                {
+                    <p>
+                        @Model.ClassificationScores;
+                    </p>   
+                } 
+            }
             
             
             <div class="col-1 dropdown">
@@ -119,7 +152,14 @@
         series: [
             {
                 type: 'candlestick',
-                data: @Html.Raw(Model.CandlesData)
+                data: @Html.Raw(Model.CandlesData),
+
+                itemStyle: {
+                    color: '#00da3c',       // Bullish (Up) -> Green
+                    color0: '#ec0000',      // Bearish (Down) -> Red
+                    borderColor: '#00da3c', // Border for Up candle
+                    borderColor0: '#ec0000' // Border for Down candle
+                }
             }
         ]
     };
