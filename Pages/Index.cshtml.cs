@@ -547,17 +547,17 @@ public class IndexModel : PageModel
         TimeSeriesDataPoint linReg = LinearRegression(timeSeriesList);
         TimeSeriesDataPoint mlReg = MachineLearningRegression(timeSeriesList);
 
-        // 2. Initialize sums
+        
         double sumOpen = 0;
         double sumHigh = 0;
         double sumLow = 0;
         double sumClose = 0;
     
-        // 3. Sum up the values (Parsing from String to Double)
-        // We use InvariantCulture to ensure dots/commas don't cause crashes depending on server settings
+        
+        // InvariantCulture is used to ensure dots/commas don't cause crashes depending on server settings (I don't quite get it)
         var culture = System.Globalization.CultureInfo.InvariantCulture;
 
-        // List of all results to iterate easily
+        
         var results = new List<TimeSeriesDataPoint> { naive, sma, linReg, mlReg };
 
         foreach (var result in results)
@@ -568,7 +568,7 @@ public class IndexModel : PageModel
             sumClose += double.Parse(result.Close, culture);
         }
 
-        // 4. Calculate Averages
+        
         double count = results.Count; // 4
     
         double avgOpen = sumOpen / count;
@@ -576,7 +576,7 @@ public class IndexModel : PageModel
         double avgLow  = sumLow / count;
         double avgClose = sumClose / count;
 
-        // 5. Return the aggregated prediction
+        
         return new TimeSeriesDataPoint(
             avgOpen.ToString(culture), 
             avgHigh.ToString(culture), 
