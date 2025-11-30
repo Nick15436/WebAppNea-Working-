@@ -20,7 +20,7 @@ public class IndexModel : PageModel
     public string ActiveTicker { get; set; }
     
     public string ClassificationLabel { get; set; }
-    public string ClassificationScores { get; set; }
+    public string[] ClassificationScores { get; set; }
 
     public IndexModel(ILogger<IndexModel> logger, HttpClient httpClient)
     {
@@ -110,10 +110,10 @@ public class IndexModel : PageModel
                    double adjHigh = double.Parse(dataPoint.High) * ratio;
                    double adjLow = double.Parse(dataPoint.Low) * ratio;
                    
-                   dataPoint.Open = adjOpen.ToString(); // Maybe add format like "F2"
-                   dataPoint.High = adjHigh.ToString();
-                   dataPoint.Low = adjLow.ToString();
-                   dataPoint.Close = adjClose.ToString();
+                   dataPoint.Open = adjOpen.ToString("F"); // Maybe add format like "F2"
+                   dataPoint.High = adjHigh.ToString("F");
+                   dataPoint.Low = adjLow.ToString("F");
+                   dataPoint.Close = adjClose.ToString("F");
 
                    // 5. Add to list
                    timeSeriesList.Add(dataPoint);
@@ -431,6 +431,7 @@ public class IndexModel : PageModel
                            "Open2", "High2", "Low2", "Close2", 
                            "Open3", "High3", "Low3", "Close3", 
                            "Open4", "High4", "Low4", "Close4")
+                           .Append(mlContext.Transforms.NormalizeMinMax("Features")) //Extra thing I added (normalises data)
                            .Append(mlContext.Transforms.Conversion.MapValueToKey("Label"));
                        
                        
@@ -467,8 +468,26 @@ public class IndexModel : PageModel
                        var resultprediction = predEngine.Predict(mostRecentModelInput);
 
                        string resultPredictionToString = resultprediction.PredictedLabel;
+
+                       ClassificationLabel = resultprediction.PredictedLabel;
                        
-                       ClassificationScores = string.Join("," , resultprediction.Score);
+                       ClassificationScores = new []
+                       {
+                           (resultprediction.Score[0] * 100).ToString(),
+                           (resultprediction.Score[1] * 100).ToString(),
+                           (resultprediction.Score[2] * 100).ToString()
+                       };
+                       
+                       IDataView predictions = trainedModel.Transform(trainingDataView);
+                       RegressionMetrics metrics = mlContext.Regression.Evaluate(predictions, labelColumnName: "Label", scoreColumnName: "Score");
+
+                      
+                       _logger.LogInformation("Mean Absolute Error:");
+                       _logger.LogInformation(metrics.MeanAbsoluteError.ToString());
+
+                       _logger.LogInformation("Root Mean Squared Error:");
+                       _logger.LogInformation(metrics.RootMeanSquaredError.ToString());
+                       
 
                        return resultPredictionToString;
     }
@@ -492,7 +511,6 @@ public class IndexModel : PageModel
             
     }
     
-    // Helper method: Calculates the linear regression prediction for a specific property
     private static string CalculateRegressionPrediction(List<TimeSeriesDataPoint> data, int n, Func<TimeSeriesDataPoint, string> priceSelector)
     {
         double S_x = 0;
@@ -522,11 +540,50 @@ public class IndexModel : PageModel
         return predictedValue.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
     
-    
-    
-    public static TimeSeriesDataPoint EnsembleModel(List<TimeSeriesDataPoint> timeSeriesList)
+    public TimeSeriesDataPoint EnsembleModel(List<TimeSeriesDataPoint> timeSeriesList)
     {
-        TimeSeriesDataPoint timeSeriesPrediction = new TimeSeriesDataPoint("","","","");
-        return timeSeriesPrediction;
+        TimeSeriesDataPoint naive = NaivePrediction(timeSeriesList);
+        TimeSeriesDataPoint sma = SimpleMovingAverage(timeSeriesList);
+        TimeSeriesDataPoint linReg = LinearRegression(timeSeriesList);
+        TimeSeriesDataPoint mlReg = MachineLearningRegression(timeSeriesList);
+
+        // 2. Initialize sums
+        double sumOpen = 0;
+        double sumHigh = 0;
+        double sumLow = 0;
+        double sumClose = 0;
+    
+        // 3. Sum up the values (Parsing from String to Double)
+        // We use InvariantCulture to ensure dots/commas don't cause crashes depending on server settings
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+
+        // List of all results to iterate easily
+        var results = new List<TimeSeriesDataPoint> { naive, sma, linReg, mlReg };
+
+        foreach (var result in results)
+        {
+            sumOpen  += double.Parse(result.Open, culture);
+            sumHigh  += double.Parse(result.High, culture);
+            sumLow   += double.Parse(result.Low, culture);
+            sumClose += double.Parse(result.Close, culture);
+        }
+
+        // 4. Calculate Averages
+        double count = results.Count; // 4
+    
+        double avgOpen = sumOpen / count;
+        double avgHigh = sumHigh / count;
+        double avgLow  = sumLow / count;
+        double avgClose = sumClose / count;
+
+        // 5. Return the aggregated prediction
+        return new TimeSeriesDataPoint(
+            avgOpen.ToString(culture), 
+            avgHigh.ToString(culture), 
+            avgLow.ToString(culture), 
+            avgClose.ToString(culture)
+        );
     }
+    
+    
 }

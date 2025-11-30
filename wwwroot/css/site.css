@@ -1,3 +1,55 @@
+/* 1. Import 'Inter' */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+
+body {
+  font-family: 'Inter', sans-serif; 
+  background-color: #02040a !important; 
+  color: #e0e0e0; 
+  padding-top: 80px;
+}
+
+/* Headers */
+h1, h2, h3, h4, h5, .navbar-brand {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.5px; 
+  color: #ffffff !important;
+}
+
+
+.glass-panel {
+  background: rgba(10, 25, 50, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(50, 100, 200, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.navbar {
+  background-color: rgba(2, 4, 10, 0.8) !important; 
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.text-accent {
+  color: #3b82f6 !important;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 html {
   font-size: 14px;
 }
@@ -28,4 +80,51 @@ body {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
+}
+
+
+
+
+
+
+
+
+/* 1. Dropdown Animation */
+/* By default, hide the menu with 0 opacity and shift it up slightly */
+.dropdown-menu {
+  display: block; /* Bootstrap toggles this, but we need it 'block' to animate opacity */
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Bouncy effect */
+}
+
+/* When the 'show' class is added by Bootstrap, animate to full view */
+.dropdown-menu.show {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0px);
+}
+
+/* 2. Button Hover Effects */
+.btn {
+  transition: all 0.2s ease-in-out;
+}
+.btn:hover {
+  transform: translateY(-2px); /* Slight lift */
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); /* Glow effect using your blue accent */
+}
+.btn:active {
+  transform: translateY(0px); /* Push down on click */
+}
+
+/* 3. Smooth Page Fade In */
+/* Animates the whole page content when it loads */
+main {
+  animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }

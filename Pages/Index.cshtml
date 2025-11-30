@@ -4,170 +4,136 @@
     ViewData["Title"] = "Home page";
 }
 
-<div class="container-fluid bg-black text-light pt-3">
+<div class="container-fluid pt-3">
 
-    <!-- Row 1: Top Menu -->
     <div class="row">
-        <!-- 
-            ADDED: 'bg-dark', 'p-3', 'rounded'
-            This creates the dark rectangle with padding and rounded corners.
-        -->
-        <div class="col-12 bg-dark p-3 rounded d-flex justify-content-between align-items-center">
-           
+        <div class="col-12 glass-panel p-3 rounded d-flex justify-content-between align-items-center">
             <ul class="nav nav-underline mb-0" data-bs-theme="dark">
-                <li class="nav-item">
-                    <a class="nav-link @(Model.ActiveTicker == "AAPL" ? "active" : "")" href="/?ticker=AAPL">AAPL</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(Model.ActiveTicker == "GOOG" ? "active" : "")" href="/?ticker=GOOG">GOOG</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(Model.ActiveTicker == "AMZN" ? "active" : "")" href="/?ticker=AMZN">AMZN</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(Model.ActiveTicker == "MSFT" ? "active" : "")" href="/?ticker=MSFT">MSFT</a>
-                </li>
+                <li class="nav-item"><a class="nav-link @(Model.ActiveTicker == "AAPL" ? "active" : "")" href="/?ticker=AAPL">Apple</a></li>
+                <li class="nav-item"><a class="nav-link @(Model.ActiveTicker == "GOOG" ? "active" : "")" href="/?ticker=GOOG">Google</a></li>
+                <li class="nav-item"><a class="nav-link @(Model.ActiveTicker == "AMZN" ? "active" : "")" href="/?ticker=AMZN">Amazon</a></li>
+                <li class="nav-item"><a class="nav-link @(Model.ActiveTicker == "MSFT" ? "active" : "")" href="/?ticker=MSFT">Microsoft</a></li>
             </ul>
-
-
-            <div>
-                <!-- 'btn btn-primary' makes the button blue with white text -->
-                <a href="#" class="btn btn-primary">Log In</a>
-                <!-- 'ms-2' adds a small margin (margin-start) between the buttons -->
-                <a href="#" class="btn btn-primary ms-2">History</a>
-            </div>
-            
         </div>
     </div>
 
-    <!-- Row 2: Chart -->
-    <div class="row mt-3 justify-content-center">
-        
-        <div class="col-md-10">
-
+    <div class="row mt-4 justify-content-center">
+        <div class="col-12">
             @if (Model.ApiDataIsNull)
             {
-                <p> Request limit hit. Data displayed is NOT REAL-TIME. </p>
+                <div class="alert alert-warning glass-panel border-0 text-white">
+                    Request limit hit. Data displayed is NOT REAL-TIME.
+                </div>
             }
-
-            <div id="main" style="width: 100%; height:650px;"></div>
+            <div id="main" style="width: 100%; height:600px;"></div>
         </div>
     </div>
 
-    <!-- Row 3: Bottom Menu -->
-    <div class="row mt-3">
-        <div class="col-12 bg-dark text-light p-3 justify-content-between align-items-center">
-            
-            <h5>Area for text:</h5>
-            <ul>
-                <li>show the timezone of the chart</li>
-                <li>display what different models show about the data</li>
-                <li>show whether the user should buy / sell overall</li>
-                <li><strong>Current Model:</strong> 
-                    @{
-                        string displayModel;
-                        switch (Model.CurrentPrediction)
+    <div class="row mt-4">
+        <div class="col-12 glass-panel text-light p-4 rounded">
+            <div class="row">
+                
+                <div class="col-md-3 border-end border-secondary">
+                    <h6 class="text-uppercase text-secondary mb-2" style="font-size: 0.75rem; letter-spacing: 1px;">Market Data</h6>
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="display-6 fw-bold me-3">@Model.ActiveTicker</span>
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">Weekly</span>
+                    </div>
+                    <div class="d-flex flex-column gap-1">
+                        <div class="d-flex justify-content-between"><span class="text-white-50 small">Timezone</span><span class="small font-monospace">US/Eastern</span></div>
+                        <div class="d-flex justify-content-between"><span class="text-white-50 small">Currency</span><span class="small font-monospace">USD</span></div>
+                    </div>
+                </div>
+
+                <div class="col-md-5 border-end border-secondary px-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-uppercase text-secondary mb-0" style="font-size: 0.75rem; letter-spacing: 1px;">Prediction Model</h6>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="predictionDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                @Model.CurrentPrediction
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark glass-panel" aria-labelledby="predictionDropdown">
+                                <li><a class="dropdown-item @(Model.CurrentPrediction == "Naive" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=Naive">Naive</a></li>
+                                <li><a class="dropdown-item @(Model.CurrentPrediction == "MovingAverage" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=MovingAverage">Simple Moving Average</a></li>
+                                <li><a class="dropdown-item @(Model.CurrentPrediction == "LinearRegression" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=LinearRegression">Linear Regression</a></li>
+                                <li><a class="dropdown-item @(Model.CurrentPrediction == "MachineLearningRegression" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=MachineLearningRegression">ML Regression</a></li>
+                                <li><a class="dropdown-item @(Model.CurrentPrediction == "MachineLearningClassification" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=MachineLearningClassification">ML Classification</a></li>
+                                <li><a class="dropdown-item @(Model.CurrentPrediction == "EnsembleModel" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=EnsembleModel">Ensemble Model</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="p-3 rounded" style="background: rgba(0,0,0,0.3);">
+                        <p class="small text-white-50 mb-0">
+                            @if (Model.CurrentPrediction == "MachineLearningClassification") { <text>Analyses past trends to classify the next week's move.</text> }
+                            else if (Model.CurrentPrediction == "MachineLearningRegression") { <text>Uses the SDCA machine learning algorithm to predict the next week's closing price by analyzing the price data from the previous five weeks.</text> }
+                            else if (Model.CurrentPrediction == "MovingAverage") { <text>Finds the average values for the 5 most recent datapoints</text> }
+                            else if (Model.CurrentPrediction == "Naive") { <text>Assumes that the price will be the same in the future</text> }
+                            else if (Model.CurrentPrediction == "EnsembleModel") { <text>All of the models working together (excluding the classification)</text> }
+                            else { <text>Select a model to view analysis.</text> }
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-4 ps-4">
+                    <h6 class="text-uppercase text-secondary mb-3" style="font-size: 0.75rem; letter-spacing: 1px;">Analysis Results</h6>
+
+                    @if (Model.ClassificationScores != null && Model.ClassificationScores.Length >= 2)
+                    {
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between small mb-1"><span>Bullish</span><span>@Model.ClassificationScores[1]</span></div>
+                            <div class="progress" style="height: 6px; background: rgba(255,255,255,0.1);">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: @(Model.ClassificationScores[1])%;"></div>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between small mb-1"><span>Bearish</span><span>@Model.ClassificationScores[0]</span></div>
+                            <div class="progress" style="height: 6px; background: rgba(255,255,255,0.1);">
+                                <div class="progress-bar bg-danger" role="progressbar" style="width: @(Model.ClassificationScores[0])%;"></div>
+                            </div>
+                        </div>
+                        @if (Model.ClassificationScores.Length > 2)
                         {
-                            case "MovingAverage":
-                                displayModel = "Simple Moving Average";
-                                break;
-                            case "MachineLearningRegression":
-                                displayModel = "Machine Learning Regression";
-                                break;
-                            case "MachineLearningClassification":
-                                displayModel = "Machine Learning Classification";
-                                break;
-                            case "LinearRegression":
-                                displayModel = "Linear regression";
-                                break;
-                            case "EnsembleModel":
-                                displayModel = "Ensemble Model";
-                                break;
-                            default:
-                                displayModel = Model.CurrentPrediction; 
-                                break;
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between small mb-1"><span>Neutral</span><span>@Model.ClassificationScores[2].ToString()</span></div>
+                                <div class="progress" style="height: 6px; background: rgba(255,255,255,0.1);">
+                                    <div class="progress-bar bg-secondary" role="progressbar" style="width: @(Model.ClassificationScores[2])%;"></div>
+                                </div>
+                            </div>
                         }
                     }
-                    @displayModel
-                </li>
-            </ul>
-            @{
-                if (Model.CurrentPrediction == "MachineLearningClassification")
-                {
-                    <p>
-                        @Model.ClassificationScores;
-                    </p>   
-                } 
-            }
-            
-            
-            <div class="col-1 dropdown">
-                
-                <button class="btn btn-info dropdown-toggle" type="button" id="predictionDropdown" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false">
-                    Change Prediction Model
-                </button>
-                
-                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="predictionDropdown" data-bs-theme="dark">
-                    <li><a class="dropdown-item @(Model.CurrentPrediction == "Naive" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=Naive">Naive</a></li>
-                    <li><a class="dropdown-item @(Model.CurrentPrediction == "MovingAverage" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=MovingAverage">Simple Moving Average</a></li>
-                    <li><a class="dropdown-item @(Model.CurrentPrediction == "MachineLearningRegression" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=MachineLearningRegression">ML Regression</a></li>
-                    <li><a class="dropdown-item @(Model.CurrentPrediction == "MachineLearningClassification" ? "active" : "")" href="/?ticker=@Model.ActiveTicker&prediction=MachineLearningClassification">ML Classification</a></li>
-                </ul>
+                    else
+                    {
+                        <div class="d-flex align-items-center justify-content-center h-100 text-white-50"><span class="small fst-italic">Select a model to view results...</span></div>
+                    }
+                </div>
+
             </div>
         </div>
     </div>
 
 </div>
 
-
 <script type="text/javascript">
-    // Initialise the echarts instance based on the prepared dom
     var myChart = echarts.init(document.getElementById('main'), 'dark');
-
-    // Specify the configuration items and data for the chart
     var option = {
-
+        backgroundColor: 'transparent',
         dataZoom: { type: 'slider' },
-
-        grid:
-        {
-            // Set grid width to be responsive within its container
-            width: '90%', 
-            left: '5%'
-        },
-
-        tooltip: {
-            trigger: 'axis',
-            axisPointer: {
-                type: 'line'
-            }
-        },
-
-        xAxis: {
-            // The Asp library replaces certain characters with the corresponding html code in order to "help".
-            //  Html.Raw tells the Asp to not help.
-            data: @Html.Raw(Model.LabelsData)
-        },
-        yAxis: {},
-        series: [
-            {
-                type: 'candlestick',
-                data: @Html.Raw(Model.CandlesData),
-
-                itemStyle: {
-                    color: '#00da3c',       // Bullish (Up) -> Green
-                    color0: '#ec0000',      // Bearish (Down) -> Red
-                    borderColor: '#00da3c', // Border for Up candle
-                    borderColor0: '#ec0000' // Border for Down candle
+        grid: { width: '90%', left: '5%', containLabel: true },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'line' } },
+        xAxis: { data: @Html.Raw(Model.LabelsData) },
+        yAxis: { scale: true, splitLine: { show: false } },
+        series: [{
+            type: 'candlestick',
+            data: @Html.Raw(Model.CandlesData),
+            itemStyle: 
+                { 
+                    color: '#0037da', 
+                    color0: '#ffffff', 
+                    borderColor: '#0037da', 
+                    borderColor0: '#ffffff' 
                 }
-            }
-        ]
+        }]
     };
-
-    // Display the chart using the configuration items and data just specified.
     myChart.setOption(option);
-
-    // Make the chart resize with the window (important for responsive design)
     window.addEventListener('resize', myChart.resize);
-
 </script>
