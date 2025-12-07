@@ -35,6 +35,9 @@ h1, h2, h3, h4, h5, .navbar-brand {
   color: #3b82f6 !important;
 }
 
+.hover-danger:hover {
+  color: #ff4d4d !important;
+}
 
 
 

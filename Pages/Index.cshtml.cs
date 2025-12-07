@@ -10,6 +10,7 @@ namespace WebAppNea.Pages;
 
 public class IndexModel : PageModel
 {
+    private readonly Supabase.Client _supabase;
     private readonly ILogger<IndexModel> _logger;
     private readonly HttpClient _httpClient;
     public string CandlesData;
@@ -21,15 +22,198 @@ public class IndexModel : PageModel
     
     public string ClassificationLabel { get; set; }
     public string[] ClassificationScores { get; set; }
+    
+    public string LoggedInUsername { get; set; }
 
-    public IndexModel(ILogger<IndexModel> logger, HttpClient httpClient)
+    public IndexModel(ILogger<IndexModel> logger, HttpClient httpClient, Supabase.Client supabase)
     {
         _logger = logger;
         _httpClient = httpClient;
+        _supabase = supabase;
+    }
+    
+    
+    // This method is used as the login handler:
+    public async Task<IActionResult> OnPostLoginAsync(string email, string password)
+    {
+        try
+        {
+            // Attempt to log in with Supabase
+            var session = await _supabase.Auth.SignIn(email, password);
+        
+            // Save the access token to the Session (Memory) so the user stays logged in
+            if (session != null && session.AccessToken != null)
+            {
+                HttpContext.Session.SetString("SupabaseToken", session.AccessToken);
+                HttpContext.Session.SetString("SupabaseRefreshToken", session.RefreshToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex.Message);
+            TempData["ErrorMessage"] = "Error: " + ex.Message;
+        }
+
+        return RedirectToPage(); // Refresh the page
+    }
+    
+    // This method is used as the Sign-Up Handler:
+    public async Task<IActionResult> OnPostSignUpAsync(string username, string email, string password)
+    {
+        try
+        {
+            // Prepare the User Data (Username)
+            var options = new Supabase.Gotrue.SignUpOptions
+            {
+                Data = new Dictionary<string, object>
+                {
+                    { "username", username } 
+                }
+            };
+
+            // Create the user
+            var session = await _supabase.Auth.SignUp(email, password, options);
+            
+            if (session != null && session.AccessToken != null)
+            {
+                // Save to session memory
+                HttpContext.Session.SetString("SupabaseToken", session.AccessToken);
+                HttpContext.Session.SetString("SupabaseRefreshToken", session.RefreshToken);
+                
+                await _supabase.Auth.SetSession(session.AccessToken, session.RefreshToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex.Message);
+            TempData["ErrorMessage"] = "Signup Error: " + ex.Message;
+        }
+
+        return RedirectToPage();
+    }
+    
+    // This method is used as the logout handler:
+    public IActionResult OnPostLogout()
+    {
+        // Clear the session
+        HttpContext.Session.Remove("SupabaseToken");
+        _supabase.Auth.SignOut();
+        return RedirectToPage();
+    }
+    
+    
+    // This method is used as the ticker search handler:
+    public async Task<IActionResult> OnGetSearchTickerAsync(string query)
+    {
+        if (string.IsNullOrEmpty(query)) return new JsonResult(new List<object>());
+
+        // Getting the API Key
+        using StreamReader reader = new("API_KEY");
+        string apiKey = await reader.ReadToEndAsync();
+
+        // Call the AlphaVantage ticker search utility
+        string url = $"https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={query}&apikey={apiKey}";
+        var response = await _httpClient.GetAsync(url);
+        var content = await response.Content.ReadAsStringAsync();
+
+        // Convert JSON to C# and send it to the front end code
+        var searchResult = JsonSerializer.Deserialize<TickerSearchResponse>(content);
+        return new JsonResult(searchResult?.BestMatches ?? new List<TickerMatch>());
+    }
+    
+    //This method is used as the add handler for the ticker menu:
+    public async Task<IActionResult> OnPostAddTickerAsync(string symbol)
+    {
+        // Get the current user
+        var token = HttpContext.Session.GetString("SupabaseToken");
+        var refreshToken = HttpContext.Session.GetString("SupabaseRefreshToken");
+    
+        if (token != null && refreshToken != null)
+        {
+            await _supabase.Auth.SetSession(token, refreshToken);
+            var userId = _supabase.Auth.CurrentUser.Id;
+
+            // Get Profile
+            var profile = await _supabase.From<UserProfile>().Where(x => x.Id == userId).Single();
+
+            // Add Ticker if it doesn't exist
+            if (profile != null && !profile.FavoriteTickers.Contains(symbol))
+            {
+                profile.FavoriteTickers.Add(symbol);
+                await _supabase.From<UserProfile>().Update(profile);
+            }
+        }
+        return RedirectToPage(new { ActiveTickerticker = symbol }); // Reload page with new ticker
+    }
+    
+    
+    //This method is used as the remove handler for the ticker menu:
+    public async Task<IActionResult> OnPostRemoveTickerAsync(string symbol)
+    {
+        var token = HttpContext.Session.GetString("SupabaseToken");
+        var refreshToken = HttpContext.Session.GetString("SupabaseRefreshToken");
+
+        if (token != null && refreshToken != null)
+        {
+            await _supabase.Auth.SetSession(token, refreshToken);
+            var userId = _supabase.Auth.CurrentUser.Id;
+
+            var profile = await _supabase.From<UserProfile>().Where(x => x.Id == userId).Single();
+
+            if (profile != null && profile.FavoriteTickers.Contains(symbol))
+            {
+                profile.FavoriteTickers.Remove(symbol);
+                await _supabase.From<UserProfile>().Update(profile);
+            }
+        }
+        return RedirectToPage();
     }
 
-    public void OnGet( string prediction = "No Prediction", string ticker = "AAPL")
+    public async Task OnGet( string prediction = "No Prediction", string ticker = "AAPL")
     {
+        
+        //  This code checks for a session?
+        var token = HttpContext.Session.GetString("SupabaseToken");
+        var refreshToken = HttpContext.Session.GetString("SupabaseRefreshToken");
+
+        // Ensures both tokens are available before trying to set the session
+        if (!string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(refreshToken))
+        {
+            try 
+            {
+                await _supabase.Auth.SetSession(token, refreshToken);
+                
+                if (_supabase.Auth.CurrentUser != null)
+                {
+                    var userId = _supabase.Auth.CurrentUser.Id;
+                    var profile = await _supabase
+                        .From<UserProfile>()
+                        .Where(x => x.Id == userId)
+                        .Single();
+                
+                    if (profile != null) 
+                    {
+                        if (!Request.Query.ContainsKey("ticker"))
+                        {
+                            ticker = profile.DefaultTicker ?? ticker;
+                        }
+
+                        LoggedInUsername = profile.Username;
+                        ViewData["FavoriteTickers"] = profile.FavoriteTickers;
+                    }
+                }
+            }
+            catch 
+            {
+                // Token expired or invalid
+                HttpContext.Session.Remove("SupabaseToken");
+                HttpContext.Session.Remove("SupabaseRefreshToken");
+            }
+        }
+        
+        
+        
+        
 
         CurrentPrediction = prediction;
         ActiveTicker = ticker;
@@ -478,15 +662,6 @@ public class IndexModel : PageModel
            (resultprediction.Score[2] * 100).ToString()
        };
        
-       IDataView predictions = trainedModel.Transform(trainingDataView);
-       RegressionMetrics metrics = mlContext.Regression.Evaluate(predictions, labelColumnName: "Label", scoreColumnName: "Score");
-
-      
-       _logger.LogInformation("Mean Absolute Error:");
-       _logger.LogInformation(metrics.MeanAbsoluteError.ToString());
-
-       _logger.LogInformation("Root Mean Squared Error:");
-       _logger.LogInformation(metrics.RootMeanSquaredError.ToString());
        
        return resultPredictionToString;
     }

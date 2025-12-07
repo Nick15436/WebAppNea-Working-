@@ -9,10 +9,30 @@
     <div class="row">
         <div class="col-12 glass-panel p-3 rounded d-flex justify-content-between align-items-center">
             <ul class="nav nav-underline mb-0" data-bs-theme="dark">
-                <li class="nav-item"><a class="nav-link @(Model.ActiveTicker == "AAPL" ? "active" : "")" href="/?ticker=AAPL">Apple</a></li>
-                <li class="nav-item"><a class="nav-link @(Model.ActiveTicker == "GOOG" ? "active" : "")" href="/?ticker=GOOG">Google</a></li>
-                <li class="nav-item"><a class="nav-link @(Model.ActiveTicker == "AMZN" ? "active" : "")" href="/?ticker=AMZN">Amazon</a></li>
-                <li class="nav-item"><a class="nav-link @(Model.ActiveTicker == "MSFT" ? "active" : "")" href="/?ticker=MSFT">Microsoft</a></li>
+                @if (ViewData["FavoriteTickers"] is List<string> favorites && favorites.Count > 0)
+                {
+                    foreach (var symbol in favorites)
+                    {
+                        <li class="nav-item d-flex align-items-center me-3">
+                            <a class="nav-link @(Model.ActiveTicker == symbol ? "active" : "")" href="/?ticker=@symbol">@symbol</a>
+                        
+                            <form method="post" asp-page-handler="RemoveTicker" class="ms-1">
+                                <input type="hidden" name="symbol" value="@symbol" />
+                                <button type="submit" class="btn btn-sm btn-link text-white-50 p-0 hover-danger" style="text-decoration: none; font-size: 14px;" title="Remove">✕</button>
+                            </form>
+                        </li>
+                    }
+                }
+                else
+                {
+                    <li class="nav-item"><span class="nav-link text-white-50 disabled">No saved companies</span></li>
+                }
+
+                <li class="nav-item ms-2">
+                    <button class="nav-link text-accent border border-secondary rounded px-3" data-bs-toggle="modal" data-bs-target="#addTickerModal">
+                        + Add
+                    </button>
+                </li>
             </ul>
         </div>
     </div>
@@ -94,7 +114,7 @@
                         @if (Model.ClassificationScores.Length > 2)
                         {
                             <div class="mb-2">
-                                <div class="d-flex justify-content-between small mb-1"><span>Neutral</span><span>@Model.ClassificationScores[2].ToString()</span></div>
+                                <div class="d-flex justify-content-between small mb-1"><span>Neutral</span><span>@Model.ClassificationScores[2]</span></div>
                                 <div class="progress" style="height: 6px; background: rgba(255,255,255,0.1);">
                                     <div class="progress-bar bg-secondary" role="progressbar" style="width: @(Model.ClassificationScores[2])%;"></div>
                                 </div>
@@ -137,3 +157,23 @@
     myChart.setOption(option);
     window.addEventListener('resize', myChart.resize);
 </script>
+
+<!-- This is the code needed for the popup window when searching for a ticker. -->
+<div class="modal fade" id="addTickerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white" style="border: 1px solid rgba(255,255,255,0.1);">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Search Companies</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input type="text" id="tickerSearchInput" class="form-control bg-dark text-white border-secondary" placeholder="Type a company name (e.g. Tesla)">
+                    <button class="btn btn-primary" type="button" id="btnSearchTicker">Search</button>
+                </div>
+                <div id="searchResults" class="list-group">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
