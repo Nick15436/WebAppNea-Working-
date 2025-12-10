@@ -85,10 +85,11 @@
                     <div class="p-3 rounded" style="background: rgba(0,0,0,0.3);">
                         <p class="small text-white-50 mb-0">
                             @if (Model.CurrentPrediction == "MachineLearningClassification") { <text>Analyses past trends to classify the next week's move.</text> }
-                            else if (Model.CurrentPrediction == "MachineLearningRegression") { <text>Uses the SDCA machine learning algorithm to predict the next week's closing price by analyzing the price data from the previous five weeks.</text> }
+                            else if (Model.CurrentPrediction == "MachineLearningRegression") { <text>Uses the SDCA machine learning algorithm to predict the next week's closing price by analysing the price data from the previous five weeks.</text> }
                             else if (Model.CurrentPrediction == "MovingAverage") { <text>Finds the average values for the 5 most recent datapoints</text> }
                             else if (Model.CurrentPrediction == "Naive") { <text>Assumes that the price will be the same in the future</text> }
                             else if (Model.CurrentPrediction == "EnsembleModel") { <text>All of the models working together (excluding the classification)</text> }
+                            else if (Model.CurrentPrediction == "LinearRegression") { <text></text>}
                             else { <text>Select a model to view analysis.</text> }
                         </p>
                     </div>

@@ -92,17 +92,16 @@ body {
 
 
 
-/* 1. Dropdown Animation */
-/* By default, hide the menu with 0 opacity and shift it up slightly */
+
 .dropdown-menu {
-  display: block; /* Bootstrap toggles this, but we need it 'block' to animate opacity */
+  display: block; 
   visibility: hidden;
   opacity: 0;
   transform: translateY(-10px);
-  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Bouncy effect */
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55); 
 }
 
-/* When the 'show' class is added by Bootstrap, animate to full view */
+
 .dropdown-menu.show {
   visibility: visible;
   opacity: 1;
@@ -115,14 +114,13 @@ body {
 }
 .btn:hover {
   transform: translateY(-2px); /* Slight lift */
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); /* Glow effect using your blue accent */
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); 
 }
 .btn:active {
   transform: translateY(0px); /* Push down on click */
 }
 
-/* 3. Smooth Page Fade In */
-/* Animates the whole page content when it loads */
+/* Page Fade In */
 main {
   animation: fadeIn 0.8s ease-out;
 }

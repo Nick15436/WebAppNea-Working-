@@ -662,6 +662,14 @@ public class IndexModel : PageModel
            (resultprediction.Score[2] * 100).ToString()
        };
        
+       IDataView predictions = trainedModel.Transform(trainingDataView);
+       MulticlassClassificationMetrics metrics = mlContext.MulticlassClassification.Evaluate(predictions, labelColumnName: "Label", scoreColumnName: "Score");
+           
+       
+       _logger.LogInformation("Accuracy of Classification model:");
+       _logger.LogInformation(metrics.MicroAccuracy.ToString());
+
+       
        
        return resultPredictionToString;
     }
