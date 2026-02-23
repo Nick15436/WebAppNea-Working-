@@ -16,6 +16,7 @@
                         <li class="nav-item d-flex align-items-center me-3">
                             <a class="nav-link @(Model.ActiveTicker == symbol ? "active" : "")" href="/?ticker=@symbol">@symbol</a>
                         
+                            <!-- When the x next to the saved tickers is clicked, the "RemoveTicker" handler is called -->
                             <form method="post" asp-page-handler="RemoveTicker" class="ms-1">
                                 <input type="hidden" name="symbol" value="@symbol" />
                                 <button type="submit" class="btn btn-sm btn-link text-white-50 p-0 hover-danger" style="text-decoration: none; font-size: 14px;" title="Remove">✕</button>
@@ -89,7 +90,7 @@
                             else if (Model.CurrentPrediction == "MovingAverage") { <text>Finds the average values for the 5 most recent datapoints</text> }
                             else if (Model.CurrentPrediction == "Naive") { <text>Assumes that the price will be the same in the future</text> }
                             else if (Model.CurrentPrediction == "EnsembleModel") { <text>All of the models working together (excluding the classification)</text> }
-                            else if (Model.CurrentPrediction == "LinearRegression") { <text></text>}
+                            else if (Model.CurrentPrediction == "LinearRegression") { <text>Linear regression using OLS calculates a trend line to predict future values by reducing the difference between observed and predicted data to a minimum.</text>}
                             else { <text>Select a model to view analysis.</text> }
                         </p>
                     </div>
@@ -159,7 +160,7 @@
     window.addEventListener('resize', myChart.resize);
 </script>
 
-<!-- This is the code needed for the popup window when searching for a ticker. -->
+<!-- This is the code needed for the popup window when searching for a ticker. The word 'Modal' means a pop up window on the screen. -->
 <div class="modal fade" id="addTickerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content bg-dark text-white" style="border: 1px solid rgba(255,255,255,0.1);">
@@ -169,7 +170,7 @@
             </div>
             <div class="modal-body">
                 <div class="input-group mb-3">
-                    <input type="text" id="tickerSearchInput" class="form-control bg-dark text-white border-secondary" placeholder="Type a company name (e.g. Tesla)">
+                    <input type="text" id="tickerSearchInput" class="form-control bg-dark text-white border-secondary" placeholder="Type a company name (e.g. AAPL)">
                     <button class="btn btn-primary" type="button" id="btnSearchTicker">Search</button>
                 </div>
                 <div id="searchResults" class="list-group">

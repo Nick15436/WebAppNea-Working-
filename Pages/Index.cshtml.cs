@@ -10,6 +10,9 @@ namespace WebAppNea.Pages;
 
 public class IndexModel : PageModel
 {
+    // This attribute acts as the secure telephone line between Supabase and the code
+    // When the website starts up, ASP.NET automatically creates a Supabase.Client and hands it to the IndexModel
+    // This connection is saved into a private variable called _supabase
     private readonly Supabase.Client _supabase;
     private readonly ILogger<IndexModel> _logger;
     private readonly HttpClient _httpClient;
@@ -29,11 +32,11 @@ public class IndexModel : PageModel
     {
         _logger = logger;
         _httpClient = httpClient;
-        _supabase = supabase;
+        _supabase = supabase; 
     }
     
     
-    // This method is used as the login handler:
+    // This method is used as the login handler (handler being a type of method that is designed to "handle" a specific request from the frontend):
     public async Task<IActionResult> OnPostLoginAsync(string email, string password)
     {
         try
@@ -62,7 +65,7 @@ public class IndexModel : PageModel
     {
         try
         {
-            // Prepare the User Data (Username)
+            // Supabase handles emails and passwords by default, but extra information such as username is put into a dictionary using the line below
             var options = new Supabase.Gotrue.SignUpOptions
             {
                 Data = new Dictionary<string, object>
@@ -71,12 +74,13 @@ public class IndexModel : PageModel
                 }
             };
 
-            // Create the user
+            // This line creates the user securely
             var session = await _supabase.Auth.SignUp(email, password, options);
             
+            // If successful, Supabase sends back a session, which contains an access token, and a refresh token (for when the access token expires)
             if (session != null && session.AccessToken != null)
             {
-                // Save to session memory
+                // These tokens are saved in the two lines below
                 HttpContext.Session.SetString("SupabaseToken", session.AccessToken);
                 HttpContext.Session.SetString("SupabaseRefreshToken", session.RefreshToken);
                 
@@ -124,25 +128,32 @@ public class IndexModel : PageModel
     //This method is used as the add handler for the ticker menu:
     public async Task<IActionResult> OnPostAddTickerAsync(string symbol)
     {
-        // Get the current user
-        var token = HttpContext.Session.GetString("SupabaseToken");
+        // Both AddTicker and RemoveTicker first check who clicked the button.
+        //Web servers have no memory (they are "stateless"). To remember who is logged in, the app stores digital ID badges (Tokens) in the server's temporary memory (HttpContext.Session).
+        var token = HttpContext.Session.GetString("SupabaseToken"); 
         var refreshToken = HttpContext.Session.GetString("SupabaseRefreshToken");
     
+        // The code checks of the tokens exist and if they do, it passes them to the database (supabase) using the _supabase.Auth.SetSession(). This tells supabase to log the users (using their tokens) so that this database request (adding the ticker to the record) can be done.
         if (token != null && refreshToken != null)
         {
             await _supabase.Auth.SetSession(token, refreshToken);
             var userId = _supabase.Auth.CurrentUser.Id;
 
-            // Get Profile
+            // Now that the backend knows exactly who has logged in, the saved data of the user is checked.
+            // This line tells supabase to go to the "UserProfile" database table, find the row where the ID matches the logged user's ID, and return that single profile as a C# object. This is basically SQL (SELECT FROM WHERE).
+            // The await keyword is used to tell the server to pause this specific task until the database replies, without freezing the rest of the website (since talking across the internet to a database takes time).
             var profile = await _supabase.From<UserProfile>().Where(x => x.Id == userId).Single();
 
-            // Add Ticker if it doesn't exist
+            // This checks if a profile has been successfully found, and if the profile already contains this symbol (in order to prevent the ticker from being stored again by accident and destroy everything)
             if (profile != null && !profile.FavoriteTickers.Contains(symbol))
             {
+                // If it passes the check, then the symbol is added to the object that has been fetched from supabase.
                 profile.FavoriteTickers.Add(symbol);
+                // It then sends the updated profile object back to supabase to overwrite the old one.
                 await _supabase.From<UserProfile>().Update(profile);
             }
         }
+        // Since the change that has been made actually changes the main dashboard, the server needs to completely reload the page.
         return RedirectToPage(new { ActiveTickerticker = symbol }); // Reload page with new ticker
     }
     
@@ -705,7 +716,7 @@ public class IndexModel : PageModel
             double Xi = i;
         
             
-            // InvariantCulture is used to ensure dots/commas don't cause crashes depending on server settings (I don't quite get it)
+            // InvariantCulture is used to ensure dots/commas don't cause crashes depending on server settings (Below comment explains it)
             double Yi = double.Parse(priceSelector(data[^(n - i)]), System.Globalization.CultureInfo.InvariantCulture);
 
             S_x += Xi;
@@ -736,7 +747,7 @@ public class IndexModel : PageModel
         double sumClose = 0;
     
         
-        // InvariantCulture is used to ensure dots/commas don't cause crashes depending on server settings (I don't quite get it)
+        // InvariantCulture is used to ensure dots/commas don't cause crashes depending on server settings. Some countries use dots as a decimal point, while others use commas. This could cause a confusion in how the numbers are read.
         var culture = System.Globalization.CultureInfo.InvariantCulture;
 
         
